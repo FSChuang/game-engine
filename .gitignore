@@ -1,0 +1,61 @@
+# ---- Build output (never commit build artifacts — spec §11) ----
+build/
+out/
+cmake-build-*/          # CLion default build dirs
+install/
+
+# ---- CMake generated files ----
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+compile_commands.json   # generated; regenerate locally if your editor needs it
+
+# ---- Compiled objects, libraries, executables ----
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+main                    # the default executable name from the starter CMake
+
+# ---- Debug symbols ----
+*.dSYM/
+*.pdb
+*.ilk
+
+# ---- macOS ----
+.DS_Store
+.AppleDouble
+
+# ---- Windows ----
+Thumbs.db
+Desktop.ini
+
+# ---- Linux ----
+*~
+.directory
+
+# ---- IDEs / editors ----
+.vs/
+*.vcxproj.user
+.idea/
+.vscode/*
+!.vscode/settings.json  # OK to share editor settings (e.g. format-on-save); nothing machine-specific
+!.vscode/extensions.json
+*.swp
+
+# ---- Local, per-developer Claude Code overrides (kept out of the shared repo) ----
+CLAUDE.local.md
+
+# ---- Personal / local-only files (white-list approach) ----
+# Everything under _local/ is ignored. Put personal notes, drafts, the game
+# concept doc, and any AI discussion logs here so they never reach the shared repo.
+# Only engineering content others need (code, CMake, CLAUDE.md, ENGINEERING_SPEC.md,
+# format/git config) lives outside _local/ and gets committed.
+_local/
+build/

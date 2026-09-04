@@ -1,0 +1,65 @@
+# Code formatting for the engine project.
+# Enforces the style rules in ENGINEERING_SPEC.md (§2, §3).
+# Apply with:  clang-format -i <files>   (or enable "format on save" in your editor)
+# Requires clang-format 15+ (for InsertBraces). Homebrew: `brew install clang-format`.
+
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++17
+
+# --- Indentation: tabs, not spaces (§3) ---
+UseTab: ForIndentation
+TabWidth: 4
+IndentWidth: 4
+AccessModifierOffset: -4        # public:/private: sit at the class's own indent level
+NamespaceIndentation: All       # indent inside `namespace Engine { ... }`
+
+# --- Braces on their own line for types, functions, and blocks (§3) ---
+BreakBeforeBraces: Allman
+
+# --- Always use braces, even for single-statement if/for (§3) ---
+InsertBraces: true
+
+# --- Line length (§3: ~120 cols) ---
+ColumnLimit: 120
+
+# --- No horizontal alignment — it rots on edit and creates noisy diffs (§3) ---
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignTrailingComments: false
+AlignOperands: false
+
+# --- Pointers/references bind to the type: `Type* name`, `Type& name` ---
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# --- Keep short constructs readable; don't collapse them onto one line ---
+AllowShortFunctionsOnASingleLine: Empty     # `{}` only; real bodies stay multi-line
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+
+# --- Spacing ---
+SpaceBeforeParens: ControlStatements   # `if (` yes, `foo(` no
+SpacesInParentheses: false
+SpaceAfterCStyleCast: true
+
+# --- Includes: group and order per spec §3.
+#     Category 0 = the file's own matching header (IncludeIsMainRegex handles it).
+#     1 = engine headers ("...")   2 = SDL / third-party (<SDL3/...>)   3 = std / system (<...>)
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:    '^<SDL3/'
+    Priority: 2
+  - Regex:    '^".*"'
+    Priority: 1
+  - Regex:    '^<.*>'
+    Priority: 3
+
+# --- Misc ---
+FixNamespaceComments: false     # spec §7 bans closing-brace comments; don't auto-add them
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1

@@ -1,0 +1,34 @@
+# Normalize line endings so macOS/Windows/Linux teammates don't fight CRLF vs LF.
+# (Spec §8, §11.) Git stores text as LF and checks it out as LF everywhere.
+
+# Default: auto-detect text, store & check out with LF.
+* text=auto eol=lf
+
+# Source & config — always text, always LF.
+*.cpp   text eol=lf
+*.h     text eol=lf
+*.hpp   text eol=lf
+*.c     text eol=lf
+*.cmake text eol=lf
+*.txt   text eol=lf
+*.md    text eol=lf
+*.glsl  text eol=lf
+*.vert  text eol=lf
+*.frag  text eol=lf
+CMakeLists.txt text eol=lf
+
+# Shell scripts must stay LF (they break with CRLF).
+*.sh    text eol=lf
+
+# Binary assets — never touch these (no EOL conversion, no diffing as text).
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.bmp   binary
+*.wav   binary
+*.ogg   binary
+*.mp3   binary
+*.ttf   binary
+*.otf   binary
+*.zip   binary
