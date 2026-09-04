@@ -32,4 +32,14 @@ namespace Engine
 	{
 		return m_Color;
 	}
+
+	Vector2 Entity::GetVelocity() const
+	{
+		return m_Velocity;
+	}
+
+	void Entity::SetVelocity(Vector2 velocity)
+	{
+		m_Velocity = velocity;
+	}
 }

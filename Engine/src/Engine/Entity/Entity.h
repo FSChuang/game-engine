@@ -31,9 +31,13 @@ namespace Engine
 		Vector2 GetSize() const;
 		Color GetColor() const;
 
+		Vector2 GetVelocity() const;
+		void SetVelocity(Vector2 velocity);
+
 	private:
 		Vector2 m_Position;
 		Vector2 m_Size;
 		Color m_Color;
+		Vector2 m_Velocity{ 0.0f, 0.0f };
 	};
 }
