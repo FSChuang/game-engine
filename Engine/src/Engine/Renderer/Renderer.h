@@ -7,6 +7,8 @@ struct SDL_Renderer;
 
 namespace Engine
 {
+	class Entity;
+
 	// Window/renderer configuration the game defines, not a value hidden inside the engine
 	// (ENGINEERING_SPEC.md §9: configurable data stays at the top level).
 	struct WindowConfig
@@ -32,6 +34,9 @@ namespace Engine
 
 		// Presents the completed frame to the window.
 		void EndFrame();
+
+		// Draws an entity as a filled rectangle using its position, size, and color.
+		void DrawEntity(const Entity& entity);
 
 	private:
 		SDL_Window* m_Window;

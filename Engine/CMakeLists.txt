@@ -8,6 +8,7 @@ find_package(SDL3 REQUIRED)
 # List engine source files here as you implement each system.
 add_library(Engine STATIC
     src/Engine/Core/Application.cpp
+    src/Engine/Entity/Entity.cpp
     src/Engine/Renderer/Renderer.cpp
 )
 

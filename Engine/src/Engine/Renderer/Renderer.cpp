@@ -1,5 +1,7 @@
 #include "Engine/Renderer/Renderer.h"
 
+#include "Engine/Entity/Entity.h"
+
 #include <SDL3/SDL.h>
 
 #include <stdexcept>
@@ -57,5 +59,17 @@ namespace Engine
 	void Renderer::EndFrame()
 	{
 		SDL_RenderPresent(m_Renderer);
+	}
+
+	void Renderer::DrawEntity(const Entity& entity)
+	{
+		Vector2 position = entity.GetPosition();
+		Vector2 size = entity.GetSize();
+		Color color = entity.GetColor();
+
+		SDL_SetRenderDrawColor(m_Renderer, color.R, color.G, color.B, color.A);
+
+		SDL_FRect rect{ position.X, position.Y, size.X, size.Y };
+		SDL_RenderFillRect(m_Renderer, &rect);
 	}
 }

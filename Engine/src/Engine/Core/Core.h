@@ -30,6 +30,14 @@ namespace Engine
 	{
 		return std::make_shared<T>(std::forward<Args>(args)...);
 	}
+
+	// --- Basic 2D spatial value (ENGINEERING_SPEC.md §9: value objects over bare primitives) ---
+	// Used for both position and size. Floating-point to match SDL3's float-based rendering APIs.
+	struct Vector2
+	{
+		float X;
+		float Y;
+	};
 }
 
 // --- Cross-platform assertion (ENGINEERING_SPEC.md §8) ---
