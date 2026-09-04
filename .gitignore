@@ -50,7 +50,9 @@ Desktop.ini
 *.swp
 
 # ---- Local, per-developer Claude Code overrides (kept out of the shared repo) ----
-CLAUDE.local.md
+CLAUDE.md
+ENGINEERING_SPEC.md
+PROJECT_STRUCTURE.md
 
 # ---- Personal / local-only files (white-list approach) ----
 # Everything under _local/ is ignored. Put personal notes, drafts, the game
