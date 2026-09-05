@@ -41,14 +41,23 @@ namespace Engine
 		SDL_Quit();
 	}
 
-	void Application::Run()
+	void Application::Run(const UpdateCallback& onUpdate, const RenderCallback& onRender)
 	{
+		Uint64 previousTicks = SDL_GetTicks();
+
 		while (m_IsRunning)
 		{
 			ProcessEvents();
 			ProcessScalingModeToggle();
 
+			Uint64 currentTicks = SDL_GetTicks();
+			float deltaTime = static_cast<float>(currentTicks - previousTicks) / 1000.0f;
+			previousTicks = currentTicks;
+
+			onUpdate(m_Input, deltaTime);
+
 			m_Renderer->BeginFrame();
+			onRender(*m_Renderer);
 			m_Renderer->EndFrame();
 
 			m_Input.Update();
