@@ -8,9 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # All executables land in build/bin so assets paths are predictable across targets.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-# The reusable engine (team-owned) and each game that builds on top of it.
+# The reusable, team-owned engine. Individual games (e.g. spare-parts) build on top of it
+# from their own repository, linking Engine as a subdirectory or dependency there.
 add_subdirectory(Engine)
-add_subdirectory(Game)
 
 # Unit tests (ENGINEERING_SPEC.md §10). Toggle with -DBUILD_TESTS=OFF.
 option(BUILD_TESTS "Build the engine unit tests" ON)

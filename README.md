@@ -15,13 +15,13 @@ their own game on top of it.
 - `Game/` contains individual game state, entity choices, controls, patrol behavior, and collision responses.
 - `Application` exposes a small update/render callback seam so `Game` can participate in the engine loop without putting gameplay logic inside `Engine`.
 
-## Build & run
+## Build & test
 
 ```bash
 mkdir build && cd build
 cmake ..
 make
-./bin/main
+ctest --output-on-failure
 ```
 
 ## Requirements
