@@ -16,3 +16,7 @@ add_test(NAME EntityTests COMMAND EntityTests)
 add_executable(PhysicsSystemTests PhysicsSystemTest.cpp)
 target_link_libraries(PhysicsSystemTests PRIVATE Engine)
 add_test(NAME PhysicsSystemTests COMMAND PhysicsSystemTests)
+
+add_executable(CollisionTests CollisionTest.cpp)
+target_link_libraries(CollisionTests PRIVATE Engine)
+add_test(NAME CollisionTests COMMAND CollisionTests)
