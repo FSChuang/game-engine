@@ -2,8 +2,8 @@
 
 Each folder is one engine subsystem. Included via `#include "Engine/<Folder>/<File>.h"`
 (the `Engine/src` dir is on the include path). Keep everything here **game-agnostic** —
-game-specific logic belongs in a `Game/` target, never in the engine
-(ENGINEERING_SPEC.md §0 & §5).
+game-specific logic belongs in the individual game's repository (e.g. `spare-parts`),
+never in the engine (ENGINEERING_SPEC.md §0 & §5).
 
 | Folder       | Responsibility                                   | Milestone 1 Task |
 |--------------|--------------------------------------------------|------------------|
