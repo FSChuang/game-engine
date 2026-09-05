@@ -9,6 +9,7 @@ find_package(SDL3 REQUIRED)
 add_library(Engine STATIC
     src/Engine/Core/Application.cpp
     src/Engine/Entity/Entity.cpp
+    src/Engine/Input/InputManager.cpp
     src/Engine/Physics/PhysicsSystem.cpp
     src/Engine/Renderer/Renderer.cpp
 )
