@@ -6,6 +6,12 @@
 
 namespace Engine
 {
+	namespace
+	{
+		// Dev/debug key that toggles the renderer's scaling mode (Milestone 1 Task 6).
+		constexpr SDL_Scancode ScalingModeToggleKey = SDL_SCANCODE_TAB;
+	}
+
 	Application::Application(const WindowConfig& windowConfig)
 		: m_IsRunning(true)
 	{
@@ -40,9 +46,20 @@ namespace Engine
 		while (m_IsRunning)
 		{
 			ProcessEvents();
+			ProcessScalingModeToggle();
 
 			m_Renderer->BeginFrame();
 			m_Renderer->EndFrame();
+
+			m_Input.Update();
+		}
+	}
+
+	void Application::ProcessScalingModeToggle()
+	{
+		if (m_Input.IsKeyJustPressed(ScalingModeToggleKey))
+		{
+			m_Renderer->ToggleScalingMode();
 		}
 	}
 

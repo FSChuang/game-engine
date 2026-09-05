@@ -20,3 +20,7 @@ add_test(NAME PhysicsSystemTests COMMAND PhysicsSystemTests)
 add_executable(CollisionTests CollisionTest.cpp)
 target_link_libraries(CollisionTests PRIVATE Engine)
 add_test(NAME CollisionTests COMMAND CollisionTests)
+
+add_executable(ScalingTests ScalingTest.cpp)
+target_link_libraries(ScalingTests PRIVATE Engine)
+add_test(NAME ScalingTests COMMAND ScalingTests)

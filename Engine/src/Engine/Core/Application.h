@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/Core.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Renderer/Renderer.h"
 
 namespace Engine
@@ -22,8 +23,10 @@ namespace Engine
 
 	private:
 		void ProcessEvents();
+		void ProcessScalingModeToggle();
 
 		Scope<Renderer> m_Renderer;
+		InputManager m_Input;
 		bool m_IsRunning;
 	};
 }
