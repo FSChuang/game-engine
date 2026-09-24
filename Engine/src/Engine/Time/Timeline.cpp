@@ -2,7 +2,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <SDL3_ttf/SDL_ttf.h>
+// #include <SDL3_ttf/SDL_ttf.h>
 
 namespace Engine {
     Timeline::Timeline() 
@@ -21,9 +21,10 @@ namespace Engine {
     : start_time(0),
     elapsed_paused_time(0),
     last_paused_time(0),
-    tic(1),
+    tic(tic),
+    time_offset(0),
     paused(),
-    anchor(nullptr)
+    anchor(anchor)
     {
         if (anchor != nullptr) {
             start_time = anchor->getTime();
