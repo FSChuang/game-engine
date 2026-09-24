@@ -1,4 +1,5 @@
 #include "Engine/Core/Application.h"
+#include "Engine/Time/Timeline.h"
 
 #include <SDL3/SDL.h>
 
@@ -43,16 +44,22 @@ namespace Engine
 
 	void Application::Run(const UpdateCallback& onUpdate, const RenderCallback& onRender)
 	{
-		Uint64 previousTicks = SDL_GetTicks();
+		// Uint64 previousTicks = SDL_GetTicks();
+
+		int64_t previousTime = m_GameTimeline.getTime();
 
 		while (m_IsRunning)
 		{
 			ProcessEvents();
 			ProcessScalingModeToggle();
 
-			Uint64 currentTicks = SDL_GetTicks();
-			float deltaTime = static_cast<float>(currentTicks - previousTicks) / 1000.0f;
-			previousTicks = currentTicks;
+			// Uint64 currentTicks = SDL_GetTicks();
+			// float deltaTime = static_cast<float>(currentTicks - previousTicks) / 1000.0f;
+			// previousTicks = currentTicks;
+
+			int64_t currentTime = m_GameTimeline.getTime();
+			float deltaTime = static_cast<float>(currentTime - previousTime) / 1000.0f;
+			previousTime = currentTime;
 
 			onUpdate(m_Input, deltaTime);
 
@@ -82,5 +89,10 @@ namespace Engine
 				m_IsRunning = false;
 			}
 		}
+	}
+
+	Timeline& Application::GetGameTimeline()
+	{
+		return m_GameTimeline;
 	}
 }

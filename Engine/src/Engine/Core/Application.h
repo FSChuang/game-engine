@@ -3,6 +3,7 @@
 #include "Engine/Core/Core.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Time/Timeline.h"
 
 #include <functional>
 
@@ -29,6 +30,9 @@ namespace Engine
 		// once per frame with the input manager and elapsed seconds, then onRender once per
 		// frame with the renderer, between BeginFrame()/EndFrame().
 		void Run(const UpdateCallback& onUpdate, const RenderCallback& onRender);
+		
+		// timeline
+		Timeline& GetGameTimeline();
 
 	private:
 		void ProcessEvents();
@@ -37,5 +41,7 @@ namespace Engine
 		Scope<Renderer> m_Renderer;
 		InputManager m_Input;
 		bool m_IsRunning;
+		// timeline
+		Timeline m_GameTimeline;
 	};
 }
