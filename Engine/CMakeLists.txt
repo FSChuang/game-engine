@@ -13,6 +13,7 @@ add_library(Engine STATIC
     src/Engine/Input/InputManager.cpp
     src/Engine/Physics/PhysicsSystem.cpp
     src/Engine/Renderer/Renderer.cpp
+    src/Engine/Time/Timeline.cpp
 )
 
 # PUBLIC so games that link Engine can `#include "Engine/..."` and get SDL too.

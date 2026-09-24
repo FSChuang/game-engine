@@ -40,3 +40,7 @@ ctest --output-on-failure
 | Task 4 – Input Handling | `Engine/Input/InputManager` | Keyboard polling through `SDL_GetKeyboardState`; game code queries abstract key state rather than implementing gameplay through SDL key events |
 | Task 5 – Collision Detection | `Engine/Collision/Collision` | Generic AABB overlap detection between entities; returns whether two entities overlap; collision response remains game-specific |
 | Task 6 – Scaling System | `Engine/Renderer/Renderer`, `Engine/Core/Application` (input-triggered toggle) | Constant (pixel-based) and Proportional (percentage-based) scaling; Tab toggles modes through the input system |
+
+## Milestone 2 Engine Task Mapping
+| Task | Engine implementation | Design / responsibility |
+|---|---|---|

@@ -61,3 +61,7 @@ PROJECT_STRUCTURE.md
 # format/git config) lives outside _local/ and gets committed.
 _local/
 build/
+
+# test file main.cpp
+Engine/src/Engine/Time/CMakeLists.txt
+Engine/src/Engine/Time/main.cpp
