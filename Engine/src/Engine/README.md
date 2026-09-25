@@ -13,6 +13,7 @@ never in the engine (ENGINEERING_SPEC.md §0 & §5).
 | `Physics/`   | Physics + configurable gravity                    | Task 3          |
 | `Input/`     | Keyboard-state abstraction (`IsKeyPressed`)       | Task 4          |
 | `Collision/` | Bounding-box collision detection                  | Task 5          |
+| `Time/`      | Logical time representation (`Timeline`): scale, pause, anchoring | Milestone 2, Task 1 |
 | `Platform/`  | Any unavoidable OS-specific code, isolated here (§8) | —             |
 
 ## As you build a system

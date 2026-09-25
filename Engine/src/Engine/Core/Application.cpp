@@ -1,5 +1,4 @@
 #include "Engine/Core/Application.h"
-#include "Engine/Time/Timeline.h"
 
 #include <SDL3/SDL.h>
 
@@ -11,6 +10,17 @@ namespace Engine
 	{
 		// Dev/debug key that toggles the renderer's scaling mode (Milestone 1 Task 6).
 		constexpr SDL_Scancode ScalingModeToggleKey = SDL_SCANCODE_TAB;
+
+		// Dev/debug keys demonstrating Milestone 2 §1 timeline control (ENGINEERING_SPEC.md §1:
+		// named constants, not magic scancodes/literals).
+		constexpr SDL_Scancode TimelinePauseToggleKey = SDL_SCANCODE_P;
+		constexpr SDL_Scancode TimelineScaleHalfKey = SDL_SCANCODE_1;
+		constexpr SDL_Scancode TimelineScaleNormalKey = SDL_SCANCODE_2;
+		constexpr SDL_Scancode TimelineScaleDoubleKey = SDL_SCANCODE_3;
+
+		constexpr double TimelineScaleHalf = 0.5;
+		constexpr double TimelineScaleNormal = 1.0;
+		constexpr double TimelineScaleDouble = 2.0;
 	}
 
 	Application::Application(const WindowConfig& windowConfig)
@@ -24,10 +34,13 @@ namespace Engine
 		try
 		{
 			m_Renderer = CreateScope<Renderer>(windowConfig);
+			// Constructed here, after SDL_Init() has succeeded: Timeline's default constructor
+			// reads a monotonic SDL time source, which must not run before SDL is initialized.
+			m_GameTimeline = CreateScope<Timeline>();
 		}
 		catch (...)
 		{
-			// Renderer construction failed after SDL_Init succeeded: this constructor
+			// Renderer/Timeline construction failed after SDL_Init succeeded: this constructor
 			// will not complete, so ~Application will never run. Quit SDL here instead.
 			SDL_Quit();
 			throw;
@@ -44,22 +57,13 @@ namespace Engine
 
 	void Application::Run(const UpdateCallback& onUpdate, const RenderCallback& onRender)
 	{
-		// Uint64 previousTicks = SDL_GetTicks();
-
-		int64_t previousTime = m_GameTimeline.getTime();
-
 		while (m_IsRunning)
 		{
 			ProcessEvents();
 			ProcessScalingModeToggle();
+			ProcessTimelineControls();
 
-			// Uint64 currentTicks = SDL_GetTicks();
-			// float deltaTime = static_cast<float>(currentTicks - previousTicks) / 1000.0f;
-			// previousTicks = currentTicks;
-
-			int64_t currentTime = m_GameTimeline.getTime();
-			float deltaTime = static_cast<float>(currentTime - previousTime) / 1000.0f;
-			previousTime = currentTime;
+			float deltaTime = static_cast<float>(m_GameTimeline->GetDeltaTime());
 
 			onUpdate(m_Input, deltaTime);
 
@@ -79,6 +83,36 @@ namespace Engine
 		}
 	}
 
+	void Application::ProcessTimelineControls()
+	{
+		if (m_Input.IsKeyJustPressed(TimelinePauseToggleKey))
+		{
+			if (m_GameTimeline->IsPaused())
+			{
+				m_GameTimeline->Unpause();
+			}
+			else
+			{
+				m_GameTimeline->Pause();
+			}
+		}
+
+		// Scale changes are independent of pause state (ENGINEERING_SPEC.md §9: Command-Query
+		// Separation — each key sets exactly one thing); Timeline::SetScale() never touches pause.
+		if (m_Input.IsKeyJustPressed(TimelineScaleHalfKey))
+		{
+			m_GameTimeline->SetScale(TimelineScaleHalf);
+		}
+		else if (m_Input.IsKeyJustPressed(TimelineScaleNormalKey))
+		{
+			m_GameTimeline->SetScale(TimelineScaleNormal);
+		}
+		else if (m_Input.IsKeyJustPressed(TimelineScaleDoubleKey))
+		{
+			m_GameTimeline->SetScale(TimelineScaleDouble);
+		}
+	}
+
 	void Application::ProcessEvents()
 	{
 		SDL_Event event;
@@ -93,6 +127,6 @@ namespace Engine
 
 	Timeline& Application::GetGameTimeline()
 	{
-		return m_GameTimeline;
+		return *m_GameTimeline;
 	}
 }

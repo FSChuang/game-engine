@@ -1,140 +1,139 @@
-#include "Timeline.h"
+#include "Engine/Time/Timeline.h"
 
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
-// #include <SDL3_ttf/SDL_ttf.h>
 
-namespace Engine {
-    Timeline::Timeline() 
-    : start_time(0),
-    elapsed_paused_time(0),
-    last_paused_time(0),
-    tic(1),
-    time_offset(0),
-    paused(),
-    anchor(nullptr)
-    {
-        start_time = SDL_GetTicks();
-    }
+#include <stdexcept>
 
-    Timeline::Timeline(Timeline* anchor, int64_t tic) 
-    : start_time(0),
-    elapsed_paused_time(0),
-    last_paused_time(0),
-    tic(tic),
-    time_offset(0),
-    paused(),
-    anchor(anchor)
-    {
-        if (anchor != nullptr) {
-            start_time = anchor->getTime();
-        } else {
-            start_time = SDL_GetTicks();
-        }
-    }
+namespace Engine
+{
+	namespace
+	{
+		// The default real-time anchor: a monotonic clock, in seconds, independent of wall-clock/
+		// calendar time (ENGINEERING_SPEC.md §8: use SDL for anything the platform provides).
+		double RealTimeSeconds()
+		{
+			return static_cast<double>(SDL_GetTicks()) / 1000.0;
+		}
+	}
 
-    int64_t Timeline::getTime() 
-    {
-        std::lock_guard<std::mutex> lock(m);
-        return getTimeUnlocked();
-    }
+	Timeline::Timeline()
+		: Timeline(AnchorSource(&RealTimeSeconds))
+	{
+	}
 
-    int64_t Timeline::getTimeUnlocked()
-    {
-        int64_t currentTime;
+	Timeline::Timeline(AnchorSource anchorSource)
+		: m_AnchorSource(std::move(anchorSource)), m_LastAnchorSample(m_AnchorSource())
+	{
+	}
 
-        if (paused)
-        {
-            currentTime = last_paused_time;
-        }
-        else if (anchor != nullptr)
-        {
-            currentTime = anchor->getTime();
-        }
-        else
-        {
-            currentTime = SDL_GetTicks();
-        }
+	Timeline::Timeline(Timeline& parent)
+		: Timeline(AnchorSource([&parent]() { return parent.GetTime(); }))
+	{
+	}
 
-        return time_offset + (currentTime - start_time - elapsed_paused_time) / tic;
-    }
+	double Timeline::GetTime() const
+	{
+		return m_CurrentTime;
+	}
 
-    void Timeline::pause() 
-    {
-        std::lock_guard<std::mutex> lock(m);
-        if (!paused) 
-        {
-            if (anchor != nullptr) 
-            {
-                last_paused_time = anchor -> getTime();
-            }
-            else
-            {
-                last_paused_time = SDL_GetTicks();
-            }
+	void Timeline::AdvanceToNow()
+	{
+		double anchorTime = m_AnchorSource();
 
-            paused = true;
-        }
-    }
+		if (m_IsPaused)
+		{
+			// Re-anchor without accumulating, so anchor time that passes while paused is
+			// discarded rather than deferred into a catch-up jump on Unpause().
+			m_LastAnchorSample = anchorTime;
+			return;
+		}
 
-    void Timeline::unpause() 
-    {
-        std::lock_guard<std::mutex> lock(m);
-        if (paused) 
-        {
-            int64_t currentTime;
-            if (anchor != nullptr) 
-            {
-                currentTime = anchor -> getTime();
-            }
-            else
-            {
-                currentTime = SDL_GetTicks();
-            }
-            elapsed_paused_time += currentTime - last_paused_time;
+		double anchorDelta = anchorTime - m_LastAnchorSample;
+		if (anchorDelta < 0.0)
+		{
+			// Defensive monotonicity guard (semantic rule: logical time never goes backward).
+			anchorDelta = 0.0;
+		}
+		m_LastAnchorSample = anchorTime;
 
-            paused = false;
-        }
-    }
+		// Uses whatever scale/tic size are in effect right now, so a caller that changes them
+		// between two GetDeltaTime() calls only affects anchor time sampled after the change:
+		// SetScale()/SetTicSize() call this first, under the OLD value, before adopting the new
+		// one.
+		double logicalDelta = anchorDelta * m_Scale / m_TicSize;
+		m_CurrentTime += logicalDelta;
+		m_PendingDelta += logicalDelta;
+	}
 
-    bool Timeline::isPaused()
-    {
-        std::lock_guard<std::mutex> lock(m);
-        if (paused) return true;
-        else return false;
-    }
+	double Timeline::GetDeltaTime()
+	{
+		AdvanceToNow();
 
-    void Timeline::changeTic(int newTic)
-    {
+		double delta = m_PendingDelta;
+		m_PendingDelta = 0.0;
+		return delta;
+	}
 
-        // std::cout << "=== before change ===\n";
-        // std::cout << "startTime: " << start_time << std::endl;
-        // std::cout << "pausedTime: " << elapsed_paused_time << std::endl;
-        // std::cout << "tic: " << tic << std::endl;
-        // std::cout << "offset: " << time_offset << std::endl;
+	void Timeline::Pause()
+	{
+		if (m_IsPaused)
+		{
+			return;
+		}
 
-        if (newTic <= 0)
-            return;
+		// Flush time elapsed since the last sample, at the current rate, before freezing, so the
+		// paused logical time reflects the exact moment Pause() was called. Uses AdvanceToNow()
+		// directly (not GetDeltaTime()) so any flushed-but-undelivered delta stays queued in
+		// m_PendingDelta for the caller's next GetDeltaTime() call instead of being discarded here.
+		AdvanceToNow();
+		m_IsPaused = true;
+	}
 
-        std::lock_guard<std::mutex> lock(m);
+	void Timeline::Unpause()
+	{
+		if (!m_IsPaused)
+		{
+			return;
+		}
 
-        int64_t currentTimelineTime = getTimeUnlocked();
+		m_IsPaused = false;
+		m_LastAnchorSample = m_AnchorSource();
+	}
 
-        int64_t currentAnchorTime;
+	bool Timeline::IsPaused() const
+	{
+		return m_IsPaused;
+	}
 
-        if (anchor != nullptr)
-            currentAnchorTime = anchor->getTime();
-        else
-            currentAnchorTime = SDL_GetTicks();
+	void Timeline::SetScale(double scale)
+	{
+		if (scale <= 0.0)
+		{
+			throw std::invalid_argument("Timeline scale must be greater than zero");
+		}
 
-        time_offset = currentTimelineTime;
-        start_time = currentAnchorTime;
-        elapsed_paused_time = 0;
+		AdvanceToNow();
+		m_Scale = scale;
+	}
 
-        tic = newTic;
-        // std::cout << "=== after change ===\n";
-        // std::cout << "startTime: " << start_time << '\n';
-        // std::cout << "new tic: " << tic << '\n';
-        // std::cout << "offset: " << time_offset << '\n';
-    }
+	double Timeline::GetScale() const
+	{
+		return m_Scale;
+	}
+
+	void Timeline::SetTicSize(double ticSize)
+	{
+		if (ticSize <= 0.0)
+		{
+			throw std::invalid_argument("Timeline tic size must be greater than zero");
+		}
+
+		AdvanceToNow();
+		m_TicSize = ticSize;
+	}
+
+	double Timeline::GetTicSize() const
+	{
+		return m_TicSize;
+	}
 }

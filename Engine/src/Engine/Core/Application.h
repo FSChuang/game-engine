@@ -27,21 +27,26 @@ namespace Engine
 		Application& operator=(const Application&) = delete;
 
 		// Runs the main loop until quit is requested or the window is closed. Calls onUpdate
-		// once per frame with the input manager and elapsed seconds, then onRender once per
-		// frame with the renderer, between BeginFrame()/EndFrame().
+		// once per frame with the input manager and the game timeline's elapsed seconds, then
+		// onRender once per frame with the renderer, between BeginFrame()/EndFrame().
 		void Run(const UpdateCallback& onUpdate, const RenderCallback& onRender);
-		
-		// timeline
+
+		// The engine's "game time" timeline (Milestone 2 §1). Its elapsed time drives onUpdate's
+		// deltaTime. Exposed so game code can pause/unpause or change scale in response to its
+		// own input handling; Application itself already demonstrates this via debug keys, the
+		// same way it already owns the renderer-scaling debug toggle.
 		Timeline& GetGameTimeline();
 
 	private:
 		void ProcessEvents();
 		void ProcessScalingModeToggle();
+		void ProcessTimelineControls();
 
 		Scope<Renderer> m_Renderer;
 		InputManager m_Input;
 		bool m_IsRunning;
-		// timeline
-		Timeline m_GameTimeline;
+		// Constructed in the constructor body, after SDL_Init() succeeds: its default anchor
+		// reads a monotonic SDL time source, which must not run before SDL is initialized.
+		Scope<Timeline> m_GameTimeline;
 	};
 }

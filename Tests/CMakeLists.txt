@@ -24,3 +24,7 @@ add_test(NAME CollisionTests COMMAND CollisionTests)
 add_executable(ScalingTests ScalingTest.cpp)
 target_link_libraries(ScalingTests PRIVATE Engine)
 add_test(NAME ScalingTests COMMAND ScalingTests)
+
+add_executable(TimelineTests TimelineTest.cpp)
+target_link_libraries(TimelineTests PRIVATE Engine)
+add_test(NAME TimelineTests COMMAND TimelineTests)
