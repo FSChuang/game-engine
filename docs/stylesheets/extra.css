@@ -1,17 +1,22 @@
 /* ==========================================================================
    Game Engine docs — design tokens and component styles.
 
-   Palette intent: warm, calm, technical. No neon, no gradients, no
-   glassmorphism, no high-saturation SaaS blue/purple. Every color used below
-   traces back to one of the --ge-* tokens defined here — never a scattered
-   raw hex value — so the whole site can be retuned from one place.
+   Palette intent: warm earth tones — ivory, sand, olive, clay, dark brown.
+   No neon, no gradients, no glassmorphism, no high-saturation SaaS
+   blue/purple. Every color used below traces back to one of the --ge-*
+   tokens defined here — never a scattered raw hex value — so the whole site
+   can be retuned from one place.
 
    Contrast was checked against WCAG 2.1 AA (4.5:1 for normal text) for every
-   token used as text: light text/muted and dark text/muted/accent all clear
-   it. --ge-warm is intentionally NOT used as body text on the light theme's
-   white surface (only ~1.7:1) — it is a background/border tint only there;
-   the dark theme's --ge-warm was chosen light enough (~6.4:1) to also work
-   as text if ever needed.
+   token used as text: light text/muted/accent/accent-strong and dark
+   text/muted/accent/accent-strong all clear it (recalculated after the
+   earth-tone pass — see the navigation-hierarchy section below for the
+   active-state pairs). --ge-warm (sand) is intentionally NOT used as body
+   text on the light theme's white surface (only ~1.7:1) — it is a
+   background/border tint only there; the dark theme's --ge-warm was chosen
+   light enough (~7:1) to also work as text if ever needed. --ge-clay is a
+   secondary accent (used sparingly — never for primary interactive/nav
+   elements, which stay olive) and clears AA as text in both themes too.
    ========================================================================== */
 
 :root {
@@ -22,38 +27,44 @@
 
 /* ---- Light theme tokens ---- */
 [data-md-color-scheme="default"] {
-	--ge-bg: #F7F8F6;
-	--ge-surface: #FFFFFF;
-	--ge-text: #27302D;
-	--ge-muted: #68736E;
-	--ge-accent: #708D81;
-	--ge-accent-soft: #A6BFAF;
-	--ge-warm: #D8C3A5;
-	--ge-border: #E3E8E4;
-	--ge-shadow-soft: 0 1px 2px rgba(39, 48, 45, 0.07), 0 6px 16px rgba(39, 48, 45, 0.06);
+	--ge-bg: #F5F0E6;
+	--ge-surface: #FFFDF8;
+	--ge-text: #3B342C;
+	--ge-muted: #685F52;
+	--ge-accent: #5F6B47;
+	--ge-accent-strong: #4F5D3D;
+	--ge-accent-soft: #C7CFAE;
+	--ge-clay: #8E5936;
+	--ge-warm: #D8C4A5;
+	--ge-border: #DDD2C2;
+	--ge-soft-surface: #EEE8DC;
+	--ge-shadow-soft: 0 1px 2px rgba(59, 52, 44, 0.07), 0 6px 16px rgba(59, 52, 44, 0.06);
 
 	/* Admonition tints (~10% alpha over the surface), reusing the same three
 	   accent hues everywhere rather than Material's default rainbow. */
-	--ge-admonition-note-bg: #708D811a;
-	--ge-admonition-warm-bg: #D8C3A526;
-	--ge-admonition-muted-bg: #68736E1a;
+	--ge-admonition-note-bg: #5F6B471a;
+	--ge-admonition-warm-bg: #D8C4A526;
+	--ge-admonition-muted-bg: #685F521a;
 }
 
 /* ---- Dark theme tokens ---- */
 [data-md-color-scheme="slate"] {
-	--ge-bg: #181D1B;
-	--ge-surface: #202724;
-	--ge-text: #E6EBE7;
-	--ge-muted: #9AA9A2;
-	--ge-accent: #91B5A2;
-	--ge-accent-soft: #33403A;
-	--ge-warm: #B49A78;
-	--ge-border: #2E3733;
-	--ge-shadow-soft: 0 0 0 1px rgba(230, 235, 231, 0.05);
+	--ge-bg: #201E1A;
+	--ge-surface: #292620;
+	--ge-text: #ECE4D8;
+	--ge-muted: #B5AA9A;
+	--ge-accent: #A6B28A;
+	--ge-accent-strong: #BCC89E;
+	--ge-accent-soft: #4E5B44;
+	--ge-clay: #C88E67;
+	--ge-warm: #C9AE85;
+	--ge-border: #403A31;
+	--ge-soft-surface: #323029;
+	--ge-shadow-soft: 0 0 0 1px rgba(236, 228, 216, 0.05);
 
-	--ge-admonition-note-bg: #91B5A226;
-	--ge-admonition-warm-bg: #B49A7826;
-	--ge-admonition-muted-bg: #9AA9A21f;
+	--ge-admonition-note-bg: #A6B28A26;
+	--ge-admonition-warm-bg: #C9AE8526;
+	--ge-admonition-muted-bg: #B5AA9A1f;
 }
 
 /* ---- Wire the "custom" palette choice to Material's own CSS variables ----
@@ -72,13 +83,13 @@
 
 [data-md-color-accent="custom"] {
 	--md-accent-fg-color: var(--ge-accent);
-	--md-accent-fg-color--transparent: #708d811a;
+	--md-accent-fg-color--transparent: #5f6b471a;
 	--md-accent-bg-color: var(--ge-surface);
 	--md-accent-bg-color--light: var(--ge-surface);
 }
 
 [data-md-color-scheme="slate"][data-md-color-accent="custom"] {
-	--md-accent-fg-color--transparent: #91b5a229;
+	--md-accent-fg-color--transparent: #a6b28a29;
 }
 
 /* ---- Base surfaces ---- */
@@ -144,6 +155,70 @@
 	line-height: 1.4;
 }
 
+/* ---- Left sidebar navigation hierarchy ----
+   Material gives a section header and a child-page link the exact same
+   `.md-nav__link` class with no built-in visual distinction — confirmed by
+   inspecting the generated DOM: a section header is a <label>, a direct
+   child of `.md-nav__item--section`; a child-page link is an <a> inside a
+   plain `.md-nav__item` with no `--section` class. That structural
+   difference is what the selectors below key off, rather than guessing.
+   Rule order matters here: the active-page override must come after the
+   section-header rule so it wins on equal specificity in the one edge case
+   where they could otherwise collide. */
+.md-nav--primary .md-nav__link {
+	color: var(--ge-muted);
+	font-weight: 400;
+	transition: color var(--ge-transition-fast), background-color var(--ge-transition-fast),
+		box-shadow var(--ge-transition-fast);
+}
+
+.md-nav--primary .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover {
+	color: var(--ge-accent);
+}
+
+.md-nav--primary .md-nav__item--section > .md-nav__link {
+	color: var(--ge-accent-strong);
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	padding-top: 0.55rem;
+	padding-bottom: 0.55rem;
+}
+
+/* Active page: stronger olive text + weight, a tinted background, and a
+   left-side indicator — never color alone. Deliberately a heavier
+   treatment than the right-hand TOC's active state below, so "current page"
+   (primary nav) and "current heading" (secondary nav) don't read the same. */
+.md-nav--primary .md-nav__link.md-nav__link--active {
+	color: var(--ge-accent-strong);
+	font-weight: 600;
+	background-color: var(--ge-soft-surface);
+	border-radius: var(--ge-radius-sm);
+	box-shadow: inset 3px 0 0 0 var(--ge-accent-strong);
+}
+
+/* ---- Right-side "On this page" TOC ----
+   The active heading is set at runtime by Material's own scroll-spy JS,
+   which toggles this same `.md-nav__link--active` class — scoped here to
+   `.md-nav--secondary` so it stays visually distinct from the primary
+   sidebar's active-page state above despite sharing a class name. */
+.md-nav--secondary .md-nav__link {
+	color: var(--ge-muted);
+	font-weight: 400;
+	transition: color var(--ge-transition-fast), background-color var(--ge-transition-fast),
+		box-shadow var(--ge-transition-fast);
+}
+
+.md-nav--secondary .md-nav__link:hover {
+	color: var(--ge-accent);
+}
+
+.md-nav--secondary .md-nav__link--active {
+	color: var(--ge-accent-strong);
+	font-weight: 600;
+	background-color: var(--ge-admonition-note-bg);
+	box-shadow: inset 2px 0 0 0 var(--ge-accent-strong);
+}
+
 /* ---- Tables ---- */
 .md-typeset table:not([class]) {
 	border: 1px solid var(--ge-border);
@@ -156,10 +231,6 @@
 	background-color: var(--ge-accent-soft);
 	color: var(--ge-text);
 	font-weight: 600;
-}
-
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
-	color: var(--ge-bg);
 }
 
 /* ---- Code blocks ---- */
@@ -413,7 +484,9 @@
    transitions already respect this on their own. ---- */
 @media (prefers-reduced-motion: reduce) {
 	.ge-card,
-	.ge-card__arrow {
+	.ge-card__arrow,
+	.md-nav--primary .md-nav__link,
+	.md-nav--secondary .md-nav__link {
 		transition: none !important;
 	}
 }
