@@ -59,32 +59,32 @@ deterministic timing, and simple multiplayer networking.
 <span class="ge-card__tag">Core</span>
 </div>
 
-<div class="ge-card ge-card--static" markdown>
-<p class="ge-card__title">Rendering</p>
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Rendering](systems/renderer.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">Window, drawing, and constant/proportional scaling modes.</p>
 <span class="ge-card__tag">SDL</span>
 </div>
 
-<div class="ge-card ge-card--static" markdown>
-<p class="ge-card__title">Entity</p>
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Entity](systems/entity.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">A generic position + size + color + velocity object — no behavior.</p>
 <span class="ge-card__tag">Core</span>
 </div>
 
-<div class="ge-card ge-card--static" markdown>
-<p class="ge-card__title">Physics</p>
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Physics](systems/physics.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">Configurable-gravity, semi-implicit Euler integration.</p>
 <span class="ge-card__tag">Core</span>
 </div>
 
-<div class="ge-card ge-card--static" markdown>
-<p class="ge-card__title">Input</p>
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Input](systems/input.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">Polled keyboard state: held vs. just-pressed.</p>
 <span class="ge-card__tag">SDL</span>
 </div>
 
-<div class="ge-card ge-card--static" markdown>
-<p class="ge-card__title">Collision</p>
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Collision](systems/collision.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">Strict axis-aligned bounding-box overlap.</p>
 <span class="ge-card__tag">Core</span>
 </div>
@@ -103,9 +103,10 @@ deterministic timing, and simple multiplayer networking.
 
 </div>
 
-*Application and Time now have full system pages — the rest are coming in a
-later documentation pass; see the [Architecture Overview](architecture/overview.md)
-for how they all fit together today.*
+*Every system above except Networking now has a full documentation slice —
+see the [Architecture Overview](architecture/overview.md) for how they all
+fit together today. Networking's deeper documentation arrives in a later
+pass.*
 
 ## Architecture, briefly
 
