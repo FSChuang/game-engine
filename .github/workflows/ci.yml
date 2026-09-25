@@ -18,6 +18,12 @@ jobs:
           install-linux-dependencies: true
           version: 3-latest
 
+      # Milestone 2 Section 2: EngineNetwork now needs libzmq + cppzmq to build.
+      # libzmq3-dev provides libzmq (and a pkg-config file cppzmq's own CMake config
+      # falls back to); cppzmq-dev provides zmq.hpp and cppzmq's CMake config.
+      - name: Set up ZeroMQ
+        run: sudo apt-get update && sudo apt-get install -y libzmq3-dev cppzmq-dev
+
       - name: Configure
         run: cmake -S . -B build
 
