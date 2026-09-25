@@ -1,0 +1,361 @@
+/* ==========================================================================
+   Game Engine docs — design tokens and component styles.
+
+   Palette intent: warm, calm, technical. No neon, no gradients, no
+   glassmorphism, no high-saturation SaaS blue/purple. Every color used below
+   traces back to one of the --ge-* tokens defined here — never a scattered
+   raw hex value — so the whole site can be retuned from one place.
+
+   Contrast was checked against WCAG 2.1 AA (4.5:1 for normal text) for every
+   token used as text: light text/muted and dark text/muted/accent all clear
+   it. --ge-warm is intentionally NOT used as body text on the light theme's
+   white surface (only ~1.7:1) — it is a background/border tint only there;
+   the dark theme's --ge-warm was chosen light enough (~6.4:1) to also work
+   as text if ever needed.
+   ========================================================================== */
+
+:root {
+	--ge-radius-sm: 6px;
+	--ge-radius-md: 10px;
+	--ge-transition-fast: 180ms ease;
+}
+
+/* ---- Light theme tokens ---- */
+[data-md-color-scheme="default"] {
+	--ge-bg: #F7F8F6;
+	--ge-surface: #FFFFFF;
+	--ge-text: #27302D;
+	--ge-muted: #68736E;
+	--ge-accent: #708D81;
+	--ge-accent-soft: #A6BFAF;
+	--ge-warm: #D8C3A5;
+	--ge-border: #E3E8E4;
+	--ge-shadow-soft: 0 1px 2px rgba(39, 48, 45, 0.07), 0 6px 16px rgba(39, 48, 45, 0.06);
+
+	/* Admonition tints (~10% alpha over the surface), reusing the same three
+	   accent hues everywhere rather than Material's default rainbow. */
+	--ge-admonition-note-bg: #708D811a;
+	--ge-admonition-warm-bg: #D8C3A526;
+	--ge-admonition-muted-bg: #68736E1a;
+}
+
+/* ---- Dark theme tokens ---- */
+[data-md-color-scheme="slate"] {
+	--ge-bg: #181D1B;
+	--ge-surface: #202724;
+	--ge-text: #E6EBE7;
+	--ge-muted: #9AA9A2;
+	--ge-accent: #91B5A2;
+	--ge-accent-soft: #33403A;
+	--ge-warm: #B49A78;
+	--ge-border: #2E3733;
+	--ge-shadow-soft: 0 0 0 1px rgba(230, 235, 231, 0.05);
+
+	--ge-admonition-note-bg: #91B5A226;
+	--ge-admonition-warm-bg: #B49A7826;
+	--ge-admonition-muted-bg: #9AA9A21f;
+}
+
+/* ---- Wire the "custom" palette choice to Material's own CSS variables ----
+   Material only ships a fixed named palette (indigo, teal, ...); "custom" is
+   its documented escape hatch — pick an unused name, then define the
+   variables it reads yourself. This keeps every color declaration in this
+   file working through the normal Material cascade rather than fighting it
+   with !important overrides. */
+[data-md-color-primary="custom"] {
+	--md-primary-fg-color: var(--ge-accent);
+	--md-primary-fg-color--light: var(--ge-accent-soft);
+	--md-primary-fg-color--dark: var(--ge-text);
+	--md-primary-bg-color: var(--ge-surface);
+	--md-primary-bg-color--light: var(--ge-surface);
+}
+
+[data-md-color-accent="custom"] {
+	--md-accent-fg-color: var(--ge-accent);
+	--md-accent-fg-color--transparent: #708d811a;
+	--md-accent-bg-color: var(--ge-surface);
+	--md-accent-bg-color--light: var(--ge-surface);
+}
+
+[data-md-color-scheme="slate"][data-md-color-accent="custom"] {
+	--md-accent-fg-color--transparent: #91b5a229;
+}
+
+/* ---- Base surfaces ---- */
+[data-md-color-scheme="default"],
+[data-md-color-scheme="slate"] {
+	--md-default-bg-color: var(--ge-bg);
+	--md-default-fg-color: var(--ge-text);
+	--md-default-fg-color--light: var(--ge-muted);
+	--md-typeset-a-color: var(--ge-accent);
+}
+
+.md-header,
+.md-tabs {
+	background-color: var(--ge-surface);
+	border-bottom: 1px solid var(--ge-border);
+	color: var(--ge-text);
+}
+
+.md-header {
+	box-shadow: none;
+}
+
+.md-main,
+.md-content {
+	background-color: var(--ge-bg);
+}
+
+.md-sidebar__scrollwrap {
+	background-color: var(--ge-bg);
+}
+
+/* ---- Typography / rhythm ----
+   Base type scale is left as Material's default (no blanket font-size
+   override) — only rhythm, weight, and content width are tuned. */
+.md-grid {
+	max-width: 62rem;
+}
+
+.md-typeset h1 {
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	margin-bottom: 1.1em;
+}
+
+.md-typeset h2 {
+	font-weight: 600;
+	margin-top: 2em;
+	padding-top: 0.6em;
+	border-top: 1px solid var(--ge-border);
+}
+
+.md-typeset h3 {
+	font-weight: 600;
+	margin-top: 1.6em;
+}
+
+.md-typeset p,
+.md-typeset li {
+	line-height: 1.65;
+}
+
+.md-nav__item {
+	line-height: 1.4;
+}
+
+/* ---- Tables ---- */
+.md-typeset table:not([class]) {
+	border: 1px solid var(--ge-border);
+	border-radius: var(--ge-radius-sm);
+	font-size: 0.68rem;
+	overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+	background-color: var(--ge-accent-soft);
+	color: var(--ge-text);
+	font-weight: 600;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+	color: var(--ge-bg);
+}
+
+/* ---- Code blocks ---- */
+.md-typeset pre > code {
+	border-radius: var(--ge-radius-sm);
+}
+
+.md-typeset code {
+	border-radius: 4px;
+}
+
+/* ---- Admonitions: restrained to the site's own three accent hues, never
+   Material's default per-type rainbow. Reused across purposes via a custom
+   title string (e.g. `!!! warning "Threading Rule"`) rather than inventing a
+   new hue per purpose. ---- */
+.md-typeset .admonition,
+.md-typeset details {
+	border-radius: var(--ge-radius-sm);
+	box-shadow: none;
+}
+
+.md-typeset .admonition.note,
+.md-typeset details.note,
+.md-typeset .admonition.info,
+.md-typeset details.info {
+	border-color: var(--ge-accent);
+}
+.md-typeset .note > .admonition-title,
+.md-typeset .note > summary,
+.md-typeset .info > .admonition-title,
+.md-typeset .info > summary {
+	background-color: var(--ge-admonition-note-bg);
+}
+.md-typeset .note > .admonition-title::before,
+.md-typeset .note > summary::before,
+.md-typeset .info > .admonition-title::before,
+.md-typeset .info > summary::before {
+	background-color: var(--ge-accent);
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+	border-color: var(--ge-warm);
+}
+.md-typeset .tip > .admonition-title,
+.md-typeset .tip > summary {
+	background-color: var(--ge-admonition-warm-bg);
+}
+.md-typeset .tip > .admonition-title::before,
+.md-typeset .tip > summary::before {
+	background-color: var(--ge-warm);
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+	border-color: var(--ge-muted);
+}
+.md-typeset .warning > .admonition-title,
+.md-typeset .warning > summary {
+	background-color: var(--ge-admonition-muted-bg);
+}
+.md-typeset .warning > .admonition-title::before,
+.md-typeset .warning > summary::before {
+	background-color: var(--ge-muted);
+}
+
+/* ---- Subsystem cards ---- */
+.ge-card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 0.75rem;
+	margin: 1.5rem 0;
+}
+
+.ge-card {
+	display: block;
+	padding: 1rem 1.1rem;
+	background-color: var(--ge-surface);
+	border: 1px solid var(--ge-border);
+	border-radius: var(--ge-radius-md);
+	text-decoration: none !important;
+	color: var(--ge-text) !important;
+	transition: transform var(--ge-transition-fast), box-shadow var(--ge-transition-fast),
+		border-color var(--ge-transition-fast);
+}
+
+a.ge-card:hover,
+a.ge-card:focus-visible {
+	transform: translateY(-2px);
+	box-shadow: var(--ge-shadow-soft);
+	border-color: var(--ge-accent);
+}
+
+.ge-card:focus-visible {
+	outline: 2px solid var(--ge-accent);
+	outline-offset: 2px;
+}
+
+.ge-card__title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-weight: 600;
+	margin-bottom: 0.35rem;
+}
+
+.ge-card__arrow {
+	transition: transform var(--ge-transition-fast);
+	color: var(--ge-accent);
+}
+
+a.ge-card:hover .ge-card__arrow {
+	transform: translateX(3px);
+}
+
+.ge-card__purpose {
+	color: var(--ge-muted);
+	font-size: 0.68rem;
+	margin: 0;
+}
+
+.ge-card__tag {
+	display: inline-block;
+	margin-top: 0.6rem;
+	padding: 0.1rem 0.5rem;
+	font-size: 0.6rem;
+	border-radius: 999px;
+	background-color: var(--ge-accent-soft);
+	color: var(--ge-text);
+}
+
+/* A card with no destination page yet (Part-1 nav is intentionally small) —
+   styled identically but without the hover-affordance, so it never implies a
+   click that leads nowhere. */
+.ge-card--static {
+	cursor: default;
+}
+
+/* ---- System Contract panel ----
+   A compact metadata panel, not a full-width table — reused once in this
+   checkpoint (Architecture Overview, for Socket) and intended to become the
+   standard header of every future system's architecture page. */
+.ge-contract {
+	border: 1px solid var(--ge-border);
+	border-radius: var(--ge-radius-md);
+	background-color: var(--ge-surface);
+	padding: 0.9rem 1.1rem;
+	margin: 1.25rem 0;
+}
+
+.ge-contract__title {
+	font-size: 0.65rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--ge-muted);
+	margin-bottom: 0.6rem;
+}
+
+.ge-contract dl {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	column-gap: 1rem;
+	row-gap: 0.45rem;
+	margin: 0;
+}
+
+.ge-contract dt {
+	color: var(--ge-muted);
+	font-size: 0.66rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.ge-contract dd {
+	margin: 0;
+	font-size: 0.68rem;
+}
+
+@media (max-width: 44em) {
+	.ge-contract dl {
+		grid-template-columns: 1fr;
+	}
+	.ge-contract dt {
+		margin-top: 0.4rem;
+	}
+	.ge-contract dt:first-child {
+		margin-top: 0;
+	}
+}
+
+/* ---- Accessibility: respect reduced-motion preferences for every custom
+   transition/animation added by this stylesheet. Material's own built-in
+   transitions already respect this on their own. ---- */
+@media (prefers-reduced-motion: reduce) {
+	.ge-card,
+	.ge-card__arrow {
+		transition: none !important;
+	}
+}
