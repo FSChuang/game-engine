@@ -44,6 +44,31 @@ static bool PlatformsEqual(const Engine::PlatformState& a, const Engine::Platfor
 	       a.VelocityY == b.VelocityY;
 }
 
+static Engine::PeerInfo MakePeer(Engine::PlayerId id, std::uint16_t p2pPort)
+{
+	return Engine::PeerInfo{ id, p2pPort };
+}
+
+static bool PeersEqual(const Engine::PeerInfo& a, const Engine::PeerInfo& b)
+{
+	return a.Id == b.Id && a.P2pPort == b.P2pPort;
+}
+
+// Finds the entry with a given PlayerId, regardless of vector order — Peers (like
+// Roster) is documented as unspecified order, so tests must never assume index i in
+// the encoded input lands at index i after decoding.
+static const Engine::PeerInfo* FindPeer(const std::vector<Engine::PeerInfo>& peers, Engine::PlayerId id)
+{
+	for (const Engine::PeerInfo& peer : peers)
+	{
+		if (peer.Id == id)
+		{
+			return &peer;
+		}
+	}
+	return nullptr;
+}
+
 int main()
 {
 	// JOIN round-trip.
@@ -53,31 +78,32 @@ int main()
 		Check(decoded.has_value(), "JoinRequest_RoundTrip_Succeeds");
 	}
 
-	// JOIN_ACCEPTED round-trip, preserving both fields exactly (Milestone 2 Section 4:
-	// not yet used by the running system — protocol-only at this checkpoint).
+	// JOIN_ACCEPTED round-trip, preserving all three fields exactly (Milestone 2
+	// Section 4's AssignedId/AssignedPort, plus Section 5's P2pPort), and matching the
+	// documented exact 9-byte wire size.
 	{
-		Engine::JoinAccepted accepted{ 42, 5561 };
+		Engine::JoinAccepted accepted{ 42, 5561, 6003 };
 		std::vector<std::uint8_t> encoded = Engine::EncodeJoinAccepted(accepted);
 		std::optional<Engine::JoinAccepted> decoded = Engine::DecodeJoinAccepted(encoded);
 
+		Check(encoded.size() == 9, "JoinAccepted_EncodedSize_IsExactly9Bytes");
 		Check(decoded.has_value(), "JoinAccepted_RoundTrip_Succeeds");
 		Check(decoded.has_value() && decoded->AssignedId == 42, "JoinAccepted_RoundTrip_PreservesAssignedId");
 		Check(decoded.has_value() && decoded->AssignedPort == 5561, "JoinAccepted_RoundTrip_PreservesAssignedPort");
+		Check(decoded.has_value() && decoded->P2pPort == 6003, "JoinAccepted_RoundTrip_PreservesP2pPort");
 	}
 
 	// JOIN_ACCEPTED rejects wrong type, truncated, and extra-trailing-byte input.
 	{
 		std::vector<std::uint8_t> wrongType = Engine::EncodeJoinRequest();
-		wrongType.push_back(0);
-		wrongType.push_back(0);
-		wrongType.push_back(0); // pad to JoinAccepted's exact size, but the leading byte says JOIN
+		wrongType.resize(9, 0); // JoinAccepted's exact 9-byte wire size, but byte 0 still says JOIN
 		Check(!Engine::DecodeJoinAccepted(wrongType).has_value(), "DecodeJoinAccepted_WrongMessageType_Rejected");
 
-		std::vector<std::uint8_t> truncated = Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1 });
+		std::vector<std::uint8_t> truncated = Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1, 1 });
 		truncated.resize(truncated.size() - 1);
 		Check(!Engine::DecodeJoinAccepted(truncated).has_value(), "DecodeJoinAccepted_Truncated_Rejected");
 
-		std::vector<std::uint8_t> plusExtra = Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1 });
+		std::vector<std::uint8_t> plusExtra = Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1, 1 });
 		plusExtra.push_back(0xFF);
 		Check(!Engine::DecodeJoinAccepted(plusExtra).has_value(), "DecodeJoinAccepted_ExtraTrailingByte_Rejected");
 	}
@@ -186,6 +212,114 @@ int main()
 		Check(!encoded.has_value(), "Snapshot_EncodeRosterLargerThanMaxPlayers_Rejected");
 	}
 
+	// --- Milestone 2 Section 5 engine checkpoint: PeerInfo / Snapshot.Peers ---
+
+	// SNAPSHOT round-trip with an empty peer directory (the neutral placeholder shape
+	// Engine's own ServerDispatch always produces — see BuildSnapshotReply).
+	{
+		Engine::Snapshot snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, {} };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		Check(encoded.has_value(), "Snapshot_EncodeEmptyPeers_Succeeds");
+
+		std::optional<Engine::Snapshot> decoded = encoded.has_value() ? Engine::DecodeSnapshot(*encoded)
+		                                                               : std::nullopt;
+		Check(decoded.has_value() && decoded->Peers.empty(), "Snapshot_RoundTrip_EmptyPeers_HasNoPeers");
+	}
+
+	// SNAPSHOT round-trip with exactly one peer, and a Roster that is deliberately a
+	// DIFFERENT size than Peers — proving the two vectors are decoded independently,
+	// with no assumption that they share a length or index correlation.
+	{
+		Engine::Snapshot snapshot{ 2, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f),
+			                        { MakeState(2, 1.0f, 2.0f, 3.0f, 4.0f), MakeState(3, 5.0f, 6.0f, 7.0f, 8.0f) },
+			                        { MakePeer(9, 6003) } };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		std::optional<Engine::Snapshot> decoded = encoded.has_value() ? Engine::DecodeSnapshot(*encoded)
+		                                                               : std::nullopt;
+
+		Check(decoded.has_value() && decoded->Roster.size() == 2, "Snapshot_RoundTrip_OnePeer_RosterSizeUnaffected");
+		Check(decoded.has_value() && decoded->Peers.size() == 1, "Snapshot_RoundTrip_OnePeer_HasOneEntry");
+		const Engine::PeerInfo* peer = decoded.has_value() ? FindPeer(decoded->Peers, 9) : nullptr;
+		Check(peer != nullptr && PeersEqual(*peer, snapshot.Peers[0]), "Snapshot_RoundTrip_OnePeer_PreservesIdAndPort");
+	}
+
+	// SNAPSHOT round-trip with three peers (assignment's minimum client count), each
+	// with a distinct nontrivial PlayerId/port pair, found by PlayerId rather than by
+	// assumed index — Peers is documented unspecified order, same as Roster.
+	{
+		Engine::Snapshot snapshot{ 5, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {},
+			                        { MakePeer(1, 6001), MakePeer(2, 6002), MakePeer(3, 6003) } };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		std::optional<Engine::Snapshot> decoded = encoded.has_value() ? Engine::DecodeSnapshot(*encoded)
+		                                                               : std::nullopt;
+
+		Check(decoded.has_value() && decoded->Peers.size() == 3, "Snapshot_RoundTrip_ThreePeers_HasThreeEntries");
+		bool allMatch = decoded.has_value();
+		for (const Engine::PeerInfo& expected : snapshot.Peers)
+		{
+			const Engine::PeerInfo* actual = decoded.has_value() ? FindPeer(decoded->Peers, expected.Id) : nullptr;
+			allMatch = allMatch && actual != nullptr && PeersEqual(*actual, expected);
+		}
+		Check(allMatch, "Snapshot_RoundTrip_ThreePeers_PreservesEachIdAndPort");
+	}
+
+	// SNAPSHOT supports exactly MaxPlayers peer entries.
+	{
+		Engine::Snapshot snapshot{ 9, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, {} };
+		for (std::size_t i = 0; i < Engine::MaxPlayers; ++i)
+		{
+			snapshot.Peers.push_back(
+			    MakePeer(static_cast<Engine::PlayerId>(i + 1), static_cast<std::uint16_t>(6001 + i)));
+		}
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		Check(encoded.has_value(), "Snapshot_EncodeMaxPlayersPeers_Succeeds");
+
+		std::optional<Engine::Snapshot> decoded = encoded.has_value() ? Engine::DecodeSnapshot(*encoded)
+		                                                               : std::nullopt;
+		Check(decoded.has_value() && decoded->Peers.size() == Engine::MaxPlayers,
+		      "Snapshot_RoundTrip_MaxPlayersPeers_HasExactlyMaxPlayersEntries");
+	}
+
+	// Encoding a peer directory larger than MaxPlayers is rejected, exactly like an
+	// oversized Roster.
+	{
+		Engine::Snapshot snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, {} };
+		for (std::size_t i = 0; i < Engine::MaxPlayers + 1; ++i)
+		{
+			snapshot.Peers.push_back(MakePeer(static_cast<Engine::PlayerId>(i + 1), 6001));
+		}
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		Check(!encoded.has_value(), "Snapshot_EncodePeersLargerThanMaxPlayers_Rejected");
+	}
+
+	// Malformed peer count (exceeds MaxPlayers) is rejected even paired with a buffer
+	// length matching the (invalid) declared count. For an empty-roster,
+	// single-peer Snapshot, the peer-count byte sits right before that one peer's bytes.
+	{
+		std::vector<std::uint8_t> malformed =
+		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, { MakePeer(1, 6001) } });
+		std::size_t peerCountIndex = malformed.size() - 1 - 6; // 6 bytes of the one PeerInfo, count byte just before
+		malformed[peerCountIndex] = static_cast<std::uint8_t>(Engine::MaxPlayers + 1);
+		Check(!Engine::DecodeSnapshot(malformed).has_value(), "DecodeSnapshot_PeerCountExceedsMaxPlayers_Rejected");
+	}
+
+	// Truncated SNAPSHOT: peer count declares one peer, but the buffer is cut short
+	// inside that one PeerInfo's bytes.
+	{
+		std::optional<std::vector<std::uint8_t>> encoded =
+		    Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, { MakePeer(1, 6001) } });
+		encoded->resize(encoded->size() - 2); // chop into the middle of the one peer entry
+		Check(!Engine::DecodeSnapshot(*encoded).has_value(), "DecodeSnapshot_TruncatedPeerInfo_Rejected");
+	}
+
+	// Extra trailing byte after a well-formed peer directory is rejected.
+	{
+		std::vector<std::uint8_t> plusExtra =
+		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, { MakePeer(1, 6001) } });
+		plusExtra.push_back(0xFF);
+		Check(!Engine::DecodeSnapshot(plusExtra).has_value(), "DecodeSnapshot_ExtraTrailingByteAfterPeers_Rejected");
+	}
+
 	// Truncated JOIN (empty buffer) is rejected.
 	{
 		std::vector<std::uint8_t> empty;
@@ -232,12 +366,15 @@ int main()
 	}
 
 	// Malformed roster count (exceeds MaxPlayers) is rejected even if paired with a
-	// buffer length that matches the (invalid) declared count. For an empty-roster
-	// Snapshot, the roster-count byte is always the last byte of the encoded buffer.
+	// buffer length that matches the (invalid) declared count. For an empty-roster,
+	// empty-peers Snapshot, the peer-count byte (Milestone 2 Section 5: now appended
+	// after Roster) is the last byte, so the roster-count byte is the one right before
+	// it — no longer simply "the last byte" the way it was before Peers existed.
 	{
 		std::vector<std::uint8_t> malformed =
-		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {} });
-		malformed[malformed.size() - 1] = static_cast<std::uint8_t>(Engine::MaxPlayers + 1);
+		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, {} });
+		std::size_t rosterCountIndex = malformed.size() - 2;
+		malformed[rosterCountIndex] = static_cast<std::uint8_t>(Engine::MaxPlayers + 1);
 		Check(!Engine::DecodeSnapshot(malformed).has_value(), "DecodeSnapshot_RosterCountExceedsMaxPlayers_Rejected");
 	}
 
@@ -289,7 +426,7 @@ int main()
 	{
 		Check(Engine::PeekMessageType(Engine::EncodeJoinRequest()) == Engine::MessageType::Join,
 		      "PeekMessageType_Join_Identified");
-		Check(Engine::PeekMessageType(Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1 })) ==
+		Check(Engine::PeekMessageType(Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1, 1 })) ==
 		          Engine::MessageType::JoinAccepted,
 		      "PeekMessageType_JoinAccepted_Identified");
 		Check(Engine::PeekMessageType(Engine::EncodeStateUpdate({ MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f), false })) ==

@@ -54,16 +54,30 @@ namespace Engine
 	};
 
 	// server -> client: reply to JOIN once dedicated per-client server sessions exist
-	// (Milestone 2 Section 4). Carries the assigned player ID and the port of this
-	// client's dedicated session; the client derives the full endpoint by reusing its
-	// bootstrap endpoint's host and substituting this port — no endpoint string is ever
-	// encoded. Not yet used by the running system as of this checkpoint (see
-	// ServerDispatch/NetworkClient): this is a protocol-only addition, fully tested in
-	// isolation ahead of the dedicated-session work that will actually send it.
+	// (Milestone 2 Section 4). Carries the assigned player ID, the port of this
+	// client's dedicated session, and (Milestone 2 Section 5) the port this client
+	// should bind its own peer-to-peer PUB socket to. The client derives full endpoints
+	// by reusing its bootstrap endpoint's host and substituting these ports — no
+	// endpoint string is ever encoded (host is implicit; this project's demo runs every
+	// client and the server on one machine).
 	struct JoinAccepted
 	{
 		PlayerId AssignedId;
 		std::uint16_t AssignedPort;
+		std::uint16_t P2pPort;
+	};
+
+	// server -> client, embedded in Snapshot (Milestone 2 Section 5): the minimum
+	// information one client needs to reach another's peer-to-peer PUB socket. Host is
+	// deliberately not carried (see JoinAccepted above) — only a PlayerId and a port.
+	// Distinct from PlayerState: this is peer-discovery/routing data, never gameplay
+	// state, so it does not belong folded into PlayerState (which client -> server
+	// StateUpdate also uses, where a "my own P2P port" field would be meaningless noise
+	// sent every tic).
+	struct PeerInfo
+	{
+		PlayerId Id;
+		std::uint16_t P2pPort;
 	};
 
 	// client -> server: reports the sender's own latest state. `Leaving` is set on a
@@ -87,14 +101,24 @@ namespace Engine
 	};
 
 	// server -> client: the recipient's own ID, the shared platform's current state,
-	// and every currently active player's state. Reply to a STATE_UPDATE (and, as of
-	// this checkpoint, still the reply to JOIN too — see JoinAccepted above for the
-	// message that will take over JOIN's reply once dedicated sessions exist).
+	// every currently active player's membership (Milestone 2 Section 5: Roster's
+	// position/velocity fields are membership-era leftovers, superseded for remote
+	// rendering by the peer-to-peer channel — see Peers below), and the peer directory
+	// needed to reach each of them directly. Reply to a STATE_UPDATE (and, as of
+	// Section 4, still the reply to JOIN too — see JoinAccepted above for the message
+	// that actually took over JOIN's reply once dedicated sessions exist).
+	//
+	// Peers is not a duplicate of Roster: Roster already answers "who is active"
+	// (reused as-is), Peers only adds "how do I reach them" (PlayerId -> P2P port).
+	// Each PeerInfo carries its own PlayerId rather than relying on index correlation
+	// with Roster, since both vectors are in unspecified order (see Roster's own note
+	// above) and are not guaranteed to be built/ordered the same way.
 	struct Snapshot
 	{
 		PlayerId RecipientId;
 		PlatformState Platform;
 		std::vector<PlayerState> Roster;
+		std::vector<PeerInfo> Peers;
 	};
 
 	// server -> client: a Snapshot could not be produced; see ErrorCode. Not used to
@@ -115,8 +139,8 @@ namespace Engine
 	std::vector<std::uint8_t> EncodeJoinAccepted(const JoinAccepted& accepted);
 	std::vector<std::uint8_t> EncodeStateUpdate(const StateUpdate& update);
 
-	// Returns std::nullopt if snapshot.Roster.size() exceeds MaxPlayers, rather than
-	// producing a message no decoder could ever accept.
+	// Returns std::nullopt if snapshot.Roster.size() or snapshot.Peers.size() exceeds
+	// MaxPlayers, rather than producing a message no decoder could ever accept.
 	std::optional<std::vector<std::uint8_t>> EncodeSnapshot(const Snapshot& snapshot);
 
 	std::vector<std::uint8_t> EncodeError(ErrorCode code);

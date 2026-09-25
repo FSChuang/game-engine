@@ -47,6 +47,10 @@ int main()
 		Check(snapshot.has_value() && snapshot->Platform.PositionX == 0.0f && snapshot->Platform.PositionY == 0.0f &&
 		          snapshot->Platform.VelocityX == 0.0f && snapshot->Platform.VelocityY == 0.0f,
 		      "HandleRequest_Join_PlatformIsNeutralPlaceholder");
+		// Milestone 2 Section 5 engine checkpoint: Engine's ServerDispatch has no concept
+		// of peer discovery, so every Snapshot it builds carries an empty peer
+		// directory — spare-parts injects the real one, exactly like PlatformState.
+		Check(snapshot.has_value() && snapshot->Peers.empty(), "HandleRequest_Join_PeersIsEmptyPlaceholder");
 	}
 
 	// A second JOIN sees the first player already in its roster.

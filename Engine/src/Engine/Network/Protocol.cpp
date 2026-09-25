@@ -13,9 +13,12 @@ namespace Engine
 		constexpr std::size_t PlatformStateWireSize = Uint32FieldSize * 4; // 4 floats
 		constexpr std::size_t LeavingFlagSize = sizeof(std::uint8_t);
 		constexpr std::size_t JoinRequestWireSize = MessageTypeSize;
-		constexpr std::size_t JoinAcceptedWireSize = MessageTypeSize + Uint32FieldSize + Uint16FieldSize;
+		constexpr std::size_t JoinAcceptedWireSize =
+		    MessageTypeSize + Uint32FieldSize + Uint16FieldSize + Uint16FieldSize;
 		constexpr std::size_t StateUpdateWireSize = MessageTypeSize + PlayerStateWireSize + LeavingFlagSize;
 		constexpr std::size_t RosterCountSize = sizeof(std::uint8_t);
+		constexpr std::size_t PeerInfoWireSize = Uint32FieldSize + Uint16FieldSize; // Id + P2pPort
+		constexpr std::size_t PeerCountSize = sizeof(std::uint8_t);
 		constexpr std::size_t SnapshotHeaderSize =
 		    MessageTypeSize + Uint32FieldSize + PlatformStateWireSize + RosterCountSize;
 		constexpr std::size_t ErrorCodeSize = sizeof(std::uint8_t);
@@ -64,6 +67,12 @@ namespace Engine
 			AppendFloat(bytes, platform.PositionY);
 			AppendFloat(bytes, platform.VelocityX);
 			AppendFloat(bytes, platform.VelocityY);
+		}
+
+		void AppendPeerInfo(std::vector<std::uint8_t>& bytes, const PeerInfo& peer)
+		{
+			AppendUint32(bytes, peer.Id);
+			AppendUint16(bytes, peer.P2pPort);
 		}
 
 		bool ReadUint8(const std::vector<std::uint8_t>& bytes, std::size_t offset, std::uint8_t& outValue)
@@ -146,6 +155,18 @@ namespace Engine
 			outPlatform = PlatformState{ positionX, positionY, velocityX, velocityY };
 			return true;
 		}
+
+		bool ReadPeerInfo(const std::vector<std::uint8_t>& bytes, std::size_t offset, PeerInfo& outPeer)
+		{
+			std::uint32_t id;
+			std::uint16_t p2pPort;
+			if (!ReadUint32(bytes, offset, id) || !ReadUint16(bytes, offset + Uint32FieldSize, p2pPort))
+			{
+				return false;
+			}
+			outPeer = PeerInfo{ id, p2pPort };
+			return true;
+		}
 	}
 
 	std::vector<std::uint8_t> EncodeJoinRequest()
@@ -163,6 +184,7 @@ namespace Engine
 		AppendUint8(bytes, static_cast<std::uint8_t>(MessageType::JoinAccepted));
 		AppendUint32(bytes, accepted.AssignedId);
 		AppendUint16(bytes, accepted.AssignedPort);
+		AppendUint16(bytes, accepted.P2pPort);
 		return bytes;
 	}
 
@@ -178,13 +200,14 @@ namespace Engine
 
 	std::optional<std::vector<std::uint8_t>> EncodeSnapshot(const Snapshot& snapshot)
 	{
-		if (snapshot.Roster.size() > MaxPlayers)
+		if (snapshot.Roster.size() > MaxPlayers || snapshot.Peers.size() > MaxPlayers)
 		{
 			return std::nullopt;
 		}
 
 		std::vector<std::uint8_t> bytes;
-		bytes.reserve(SnapshotHeaderSize + PlayerStateWireSize * snapshot.Roster.size());
+		bytes.reserve(SnapshotHeaderSize + PlayerStateWireSize * snapshot.Roster.size() + PeerCountSize +
+		              PeerInfoWireSize * snapshot.Peers.size());
 		AppendUint8(bytes, static_cast<std::uint8_t>(MessageType::Snapshot));
 		AppendUint32(bytes, snapshot.RecipientId);
 		AppendPlatformState(bytes, snapshot.Platform);
@@ -192,6 +215,11 @@ namespace Engine
 		for (const PlayerState& state : snapshot.Roster)
 		{
 			AppendPlayerState(bytes, state);
+		}
+		AppendUint8(bytes, static_cast<std::uint8_t>(snapshot.Peers.size()));
+		for (const PeerInfo& peer : snapshot.Peers)
+		{
+			AppendPeerInfo(bytes, peer);
 		}
 		return bytes;
 	}
@@ -237,7 +265,13 @@ namespace Engine
 			return std::nullopt;
 		}
 
-		return JoinAccepted{ assignedId, assignedPort };
+		std::uint16_t p2pPort;
+		if (!ReadUint16(bytes, MessageTypeSize + Uint32FieldSize + Uint16FieldSize, p2pPort))
+		{
+			return std::nullopt;
+		}
+
+		return JoinAccepted{ assignedId, assignedPort, p2pPort };
 	}
 
 	std::optional<StateUpdate> DecodeStateUpdate(const std::vector<std::uint8_t>& bytes)
@@ -305,7 +339,20 @@ namespace Engine
 			return std::nullopt;
 		}
 
-		std::size_t expectedSize = SnapshotHeaderSize + PlayerStateWireSize * rosterCount;
+		std::size_t peerCountOffset = SnapshotHeaderSize + PlayerStateWireSize * rosterCount;
+
+		std::uint8_t peerCount;
+		if (!ReadUint8(bytes, peerCountOffset, peerCount))
+		{
+			return std::nullopt;
+		}
+
+		if (peerCount > MaxPlayers)
+		{
+			return std::nullopt;
+		}
+
+		std::size_t expectedSize = peerCountOffset + PeerCountSize + PeerInfoWireSize * peerCount;
 		if (bytes.size() != expectedSize)
 		{
 			return std::nullopt;
@@ -325,7 +372,21 @@ namespace Engine
 			offset += PlayerStateWireSize;
 		}
 
-		return Snapshot{ recipientId, platform, std::move(roster) };
+		std::vector<PeerInfo> peers;
+		peers.reserve(peerCount);
+		offset = peerCountOffset + PeerCountSize;
+		for (std::uint8_t i = 0; i < peerCount; ++i)
+		{
+			PeerInfo peer;
+			if (!ReadPeerInfo(bytes, offset, peer))
+			{
+				return std::nullopt;
+			}
+			peers.push_back(peer);
+			offset += PeerInfoWireSize;
+		}
+
+		return Snapshot{ recipientId, platform, std::move(roster), std::move(peers) };
 	}
 
 	std::vector<std::uint8_t> EncodeError(ErrorCode code)

@@ -13,9 +13,16 @@ namespace Engine
 		// The registry enforces MaxPlayers, so a Snapshot built from its own current
 		// contents always encodes successfully — the nullopt case in EncodeSnapshot
 		// cannot trigger here.
+		//
+		// Milestone 2 Section 5 engine checkpoint: Engine's ServerDispatch has no concept
+		// of peer discovery (bootstrap/session-port allocation is spare-parts-only, never
+		// Engine — CLAUDE.md's engine/game boundary), so every Snapshot built here
+		// carries an empty peer directory, exactly like the existing NeutralPlatformState
+		// placeholder. spare-parts/server_main.cpp injects the real one, the same way it
+		// already injects the real PlatformState.
 		std::vector<std::uint8_t> BuildSnapshotReply(const PlayerRegistry& registry, PlayerId recipientId)
 		{
-			return *EncodeSnapshot(Snapshot{ recipientId, NeutralPlatformState, registry.Snapshot() });
+			return *EncodeSnapshot(Snapshot{ recipientId, NeutralPlatformState, registry.Snapshot(), {} });
 		}
 	}
 

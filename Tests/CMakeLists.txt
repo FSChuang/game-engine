@@ -48,6 +48,13 @@ add_test(NAME ServerDispatchTests COMMAND ServerDispatchTests)
 # NetworkSmoke/SmokeServer.cpp / SmokeClient.cpp for why). Built only when
 # EngineNetwork exists, i.e. only when cppzmq was found.
 if(TARGET EngineNetwork)
+    # PUB/SUB Socket role tests (Milestone 2 Section 5 engine checkpoint): a PUB and a
+    # SUB can both live in one process/thread with no cross-process coordination, so
+    # unlike the PING/PONG smoke below, this is CTest-registered.
+    add_executable(SocketPubSubTests SocketPubSubTest.cpp)
+    target_link_libraries(SocketPubSubTests PRIVATE EngineNetwork)
+    add_test(NAME SocketPubSubTests COMMAND SocketPubSubTests)
+
     add_executable(NetworkSmokeServer NetworkSmoke/SmokeServer.cpp)
     target_link_libraries(NetworkSmokeServer PRIVATE EngineNetwork)
 
