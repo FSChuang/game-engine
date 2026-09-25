@@ -39,6 +39,10 @@ add_executable(PlayerRegistryTests PlayerRegistryTest.cpp)
 target_link_libraries(PlayerRegistryTests PRIVATE EngineNetworkCore)
 add_test(NAME PlayerRegistryTests COMMAND PlayerRegistryTests)
 
+add_executable(ServerDispatchTests ServerDispatchTest.cpp)
+target_link_libraries(ServerDispatchTests PRIVATE EngineNetworkCore)
+add_test(NAME ServerDispatchTests COMMAND ServerDispatchTests)
+
 # Headless smoke executables proving Engine::Socket's REQ/REP halves work end to
 # end (Milestone 2 Section 2). Manually run, not CTest-registered (see
 # NetworkSmoke/SmokeServer.cpp / SmokeClient.cpp for why). Built only when
@@ -49,4 +53,14 @@ if(TARGET EngineNetwork)
 
     add_executable(NetworkSmokeClient NetworkSmoke/SmokeClient.cpp)
     target_link_libraries(NetworkSmokeClient PRIVATE EngineNetwork)
+
+    # Section 2 headless server + lightweight test client (integration tooling, not
+    # CTest-registered — see NetworkIntegration/HeadlessServer.cpp for why: a real
+    # multi-process scenario is driven manually/via shell, not from inside a test
+    # binary). Built only when EngineNetwork exists, i.e. only when cppzmq was found.
+    add_executable(HeadlessServer NetworkIntegration/HeadlessServer.cpp)
+    target_link_libraries(HeadlessServer PRIVATE EngineNetwork)
+
+    add_executable(TestClient NetworkIntegration/TestClient.cpp)
+    target_link_libraries(TestClient PRIVATE EngineNetwork)
 endif()

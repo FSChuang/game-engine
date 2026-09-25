@@ -34,6 +34,17 @@ namespace Engine
 		Join = 1,
 		StateUpdate = 2,
 		Snapshot = 3,
+		Error = 4,
+	};
+
+	// Failure reasons the server can report back to a client in place of a Snapshot
+	// (Milestone 2 Section 2). Deliberately just a code — no message string, no error
+	// hierarchy, no diagnostics over the wire.
+	enum class ErrorCode : std::uint8_t
+	{
+		MalformedRequest = 1,
+		RegistryFull = 2,
+		UnknownPlayer = 3,
 	};
 
 	// client -> server: requests a new player ID. No payload beyond the message type.
@@ -59,6 +70,14 @@ namespace Engine
 		std::vector<PlayerState> Roster;
 	};
 
+	// server -> client: a Snapshot could not be produced; see ErrorCode. Not used to
+	// represent gameplay-level failures with a fake PlayerId — this is the explicit,
+	// distinct wire shape for "no Snapshot was produced."
+	struct ErrorResponse
+	{
+		ErrorCode Code;
+	};
+
 	// --- Encoding ---
 	// Explicit field-by-field byte layout: fixed-width integers in big-endian order,
 	// floats as their IEEE-754 bit pattern (via std::memcpy, never reinterpret_cast),
@@ -72,6 +91,8 @@ namespace Engine
 	// producing a message no decoder could ever accept.
 	std::optional<std::vector<std::uint8_t>> EncodeSnapshot(const Snapshot& snapshot);
 
+	std::vector<std::uint8_t> EncodeError(ErrorCode code);
+
 	// --- Decoding ---
 	// Returns std::nullopt for any malformed, truncated, padded, wrong-message-type, or
 	// oversized-roster input. Never throws, never reads out of bounds.
@@ -79,4 +100,12 @@ namespace Engine
 	std::optional<JoinRequest> DecodeJoinRequest(const std::vector<std::uint8_t>& bytes);
 	std::optional<StateUpdate> DecodeStateUpdate(const std::vector<std::uint8_t>& bytes);
 	std::optional<Snapshot> DecodeSnapshot(const std::vector<std::uint8_t>& bytes);
+	std::optional<ErrorResponse> DecodeError(const std::vector<std::uint8_t>& bytes);
+
+	// Reads just the leading message-type byte, without validating the rest of the
+	// frame. Lets a dispatcher decide which specific Decode*() to call; each Decode*()
+	// still independently re-checks the type byte itself, so this is a convenience for
+	// dispatch, not a trust boundary. Returns std::nullopt for an empty buffer or an
+	// unrecognized leading byte.
+	std::optional<MessageType> PeekMessageType(const std::vector<std::uint8_t>& bytes);
 }

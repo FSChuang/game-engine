@@ -14,6 +14,8 @@ namespace Engine
 		constexpr std::size_t StateUpdateWireSize = MessageTypeSize + PlayerStateWireSize + LeavingFlagSize;
 		constexpr std::size_t RosterCountSize = sizeof(std::uint8_t);
 		constexpr std::size_t SnapshotHeaderSize = MessageTypeSize + Uint32FieldSize + RosterCountSize;
+		constexpr std::size_t ErrorCodeSize = sizeof(std::uint8_t);
+		constexpr std::size_t ErrorWireSize = MessageTypeSize + ErrorCodeSize;
 
 		void AppendUint8(std::vector<std::uint8_t>& bytes, std::uint8_t value)
 		{
@@ -232,5 +234,63 @@ namespace Engine
 		}
 
 		return Snapshot{ recipientId, std::move(roster) };
+	}
+
+	std::vector<std::uint8_t> EncodeError(ErrorCode code)
+	{
+		std::vector<std::uint8_t> bytes;
+		bytes.reserve(ErrorWireSize);
+		AppendUint8(bytes, static_cast<std::uint8_t>(MessageType::Error));
+		AppendUint8(bytes, static_cast<std::uint8_t>(code));
+		return bytes;
+	}
+
+	std::optional<ErrorResponse> DecodeError(const std::vector<std::uint8_t>& bytes)
+	{
+		if (bytes.size() != ErrorWireSize)
+		{
+			return std::nullopt;
+		}
+
+		std::uint8_t type;
+		if (!ReadUint8(bytes, 0, type) || type != static_cast<std::uint8_t>(MessageType::Error))
+		{
+			return std::nullopt;
+		}
+
+		std::uint8_t code;
+		if (!ReadUint8(bytes, MessageTypeSize, code))
+		{
+			return std::nullopt;
+		}
+
+		switch (static_cast<ErrorCode>(code))
+		{
+			case ErrorCode::MalformedRequest:
+			case ErrorCode::RegistryFull:
+			case ErrorCode::UnknownPlayer:
+				return ErrorResponse{ static_cast<ErrorCode>(code) };
+		}
+
+		return std::nullopt; // unrecognized error code value
+	}
+
+	std::optional<MessageType> PeekMessageType(const std::vector<std::uint8_t>& bytes)
+	{
+		if (bytes.empty())
+		{
+			return std::nullopt;
+		}
+
+		switch (static_cast<MessageType>(bytes[0]))
+		{
+			case MessageType::Join:
+			case MessageType::StateUpdate:
+			case MessageType::Snapshot:
+			case MessageType::Error:
+				return static_cast<MessageType>(bytes[0]);
+		}
+
+		return std::nullopt; // unrecognized message-type byte
 	}
 }

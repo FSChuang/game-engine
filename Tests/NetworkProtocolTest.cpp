@@ -195,6 +195,51 @@ int main()
 		Check(!Engine::DecodeSnapshot(snapshotPlusExtra).has_value(), "DecodeSnapshot_ExtraTrailingByte_Rejected");
 	}
 
+	// ERROR round-trip, for every defined code.
+	{
+		for (Engine::ErrorCode code :
+		     { Engine::ErrorCode::MalformedRequest, Engine::ErrorCode::RegistryFull, Engine::ErrorCode::UnknownPlayer })
+		{
+			std::vector<std::uint8_t> encoded = Engine::EncodeError(code);
+			std::optional<Engine::ErrorResponse> decoded = Engine::DecodeError(encoded);
+			Check(decoded.has_value() && decoded->Code == code, "Error_RoundTrip_PreservesCode");
+		}
+	}
+
+	// ERROR rejects truncated, wrong-type, and unrecognized-code input.
+	{
+		std::vector<std::uint8_t> truncated = Engine::EncodeError(Engine::ErrorCode::MalformedRequest);
+		truncated.resize(1);
+		Check(!Engine::DecodeError(truncated).has_value(), "DecodeError_Truncated_Rejected");
+
+		std::vector<std::uint8_t> wrongType = Engine::EncodeJoinRequest();
+		wrongType.push_back(1); // pad to ERROR's exact size, but the leading byte says JOIN
+		Check(!Engine::DecodeError(wrongType).has_value(), "DecodeError_WrongMessageType_Rejected");
+
+		std::vector<std::uint8_t> unknownCode = Engine::EncodeError(Engine::ErrorCode::MalformedRequest);
+		unknownCode[1] = 0xFF; // not a defined ErrorCode value
+		Check(!Engine::DecodeError(unknownCode).has_value(), "DecodeError_UnrecognizedCode_Rejected");
+	}
+
+	// PeekMessageType identifies every valid message's leading byte, and rejects an
+	// empty buffer or an unrecognized one.
+	{
+		Check(Engine::PeekMessageType(Engine::EncodeJoinRequest()) == Engine::MessageType::Join,
+		      "PeekMessageType_Join_Identified");
+		Check(Engine::PeekMessageType(Engine::EncodeStateUpdate({ MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f), false })) ==
+		          Engine::MessageType::StateUpdate,
+		      "PeekMessageType_StateUpdate_Identified");
+		Check(Engine::PeekMessageType(*Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} })) ==
+		          Engine::MessageType::Snapshot,
+		      "PeekMessageType_Snapshot_Identified");
+		Check(Engine::PeekMessageType(Engine::EncodeError(Engine::ErrorCode::MalformedRequest)) ==
+		          Engine::MessageType::Error,
+		      "PeekMessageType_Error_Identified");
+
+		Check(!Engine::PeekMessageType({}).has_value(), "PeekMessageType_Empty_Rejected");
+		Check(!Engine::PeekMessageType({ 0xFF }).has_value(), "PeekMessageType_UnrecognizedByte_Rejected");
+	}
+
 	std::printf("\n%s\n", g_Failures == 0 ? "All tests passed." : "Some tests FAILED.");
 	return g_Failures == 0 ? 0 : 1;
 }
