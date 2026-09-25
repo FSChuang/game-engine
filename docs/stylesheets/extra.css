@@ -168,8 +168,7 @@
 .md-nav--primary .md-nav__link {
 	color: var(--ge-muted);
 	font-weight: 400;
-	transition: color var(--ge-transition-fast), background-color var(--ge-transition-fast),
-		box-shadow var(--ge-transition-fast);
+	transition: color var(--ge-transition-fast), background-color var(--ge-transition-fast);
 }
 
 .md-nav--primary .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover {
@@ -187,13 +186,35 @@
 /* Active page: stronger olive text + weight, a tinted background, and a
    left-side indicator — never color alone. Deliberately a heavier
    treatment than the right-hand TOC's active state below, so "current page"
-   (primary nav) and "current heading" (secondary nav) don't read the same. */
+   (primary nav) and "current heading" (secondary nav) don't read the same.
+
+   The indicator is a dedicated ::before rather than an inset box-shadow:
+   verified via computed styles that `.md-nav__link` itself carries zero
+   left padding in this Material version (the column's indentation comes
+   from an ancestor, not the link), so an inset shadow sat flush against
+   the link's own left edge — the same edge the text starts from — and
+   visually touched the first character. `padding-left` on the active link
+   (scoped to this one state, so every other row's alignment is untouched)
+   now reserves room for the indicator plus a clear gap before the text;
+   the pseudo-element is absolutely positioned and takes no part in layout. */
 .md-nav--primary .md-nav__link.md-nav__link--active {
+	position: relative;
+	padding-left: 13px;
 	color: var(--ge-accent-strong);
 	font-weight: 600;
 	background-color: var(--ge-soft-surface);
 	border-radius: var(--ge-radius-sm);
-	box-shadow: inset 3px 0 0 0 var(--ge-accent-strong);
+}
+
+.md-nav--primary .md-nav__link.md-nav__link--active::before {
+	content: "";
+	position: absolute;
+	left: 2px;
+	top: 3px;
+	bottom: 3px;
+	width: 3px;
+	border-radius: 2px;
+	background-color: var(--ge-accent-strong);
 }
 
 /* ---- Right-side "On this page" TOC ----
@@ -204,8 +225,7 @@
 .md-nav--secondary .md-nav__link {
 	color: var(--ge-muted);
 	font-weight: 400;
-	transition: color var(--ge-transition-fast), background-color var(--ge-transition-fast),
-		box-shadow var(--ge-transition-fast);
+	transition: color var(--ge-transition-fast), background-color var(--ge-transition-fast);
 }
 
 .md-nav--secondary .md-nav__link:hover {
@@ -213,10 +233,22 @@
 }
 
 .md-nav--secondary .md-nav__link--active {
+	position: relative;
+	padding-left: 11px;
 	color: var(--ge-accent-strong);
 	font-weight: 600;
 	background-color: var(--ge-admonition-note-bg);
-	box-shadow: inset 2px 0 0 0 var(--ge-accent-strong);
+}
+
+.md-nav--secondary .md-nav__link--active::before {
+	content: "";
+	position: absolute;
+	left: 2px;
+	top: 2px;
+	bottom: 2px;
+	width: 2px;
+	border-radius: 1px;
+	background-color: var(--ge-accent-strong);
 }
 
 /* ---- Tables ---- */
