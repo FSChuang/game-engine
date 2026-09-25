@@ -1,0 +1,5 @@
+# Dependencies for building the documentation site (mkdocs.yml).
+# mkdocs-material pulls in mkdocs, markdown, and pymdown-extensions as
+# transitive dependencies — that covers every extension mkdocs.yml uses
+# (admonition, attr_list, md_in_html, tables, pymdownx.*, toc).
+mkdocs-material

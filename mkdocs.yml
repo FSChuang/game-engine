@@ -2,6 +2,7 @@ site_name: Game Engine
 site_description: >-
   A lightweight C++17 / SDL3 engine built around explicit ownership,
   deterministic timing, and simple multiplayer networking.
+site_url: https://fschuang.github.io/game-engine/
 repo_url: https://github.com/FSChuang/game-engine
 repo_name: FSChuang/game-engine
 edit_uri: edit/main/docs/

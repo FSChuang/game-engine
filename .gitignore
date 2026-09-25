@@ -4,6 +4,9 @@ out/
 cmake-build-*/          # CLion default build dirs
 install/
 
+# ---- Generated documentation site (built by mkdocs; deployed via CI, never committed) ----
+site/
+
 # ---- CMake generated files ----
 CMakeCache.txt
 CMakeFiles/
