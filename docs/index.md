@@ -95,18 +95,17 @@ deterministic timing, and simple multiplayer networking.
 <span class="ge-card__tag">Core</span>
 </div>
 
-<div class="ge-card ge-card--static" markdown>
-<p class="ge-card__title">Networking</p>
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Networking](systems/networking/index.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">Wire protocol, pure dispatch logic, and a thread-affine ZeroMQ socket wrapper.</p>
 <span class="ge-card__tag">Optional — ZeroMQ</span>
 </div>
 
 </div>
 
-*Every system above except Networking now has a full documentation slice —
-see the [Architecture Overview](architecture/overview.md) for how they all
-fit together today. Networking's deeper documentation arrives in a later
-pass.*
+*Every system above now has a full documentation slice — see the
+[Architecture Overview](architecture/overview.md) for how they all fit
+together today.*
 
 ## Architecture, briefly
 

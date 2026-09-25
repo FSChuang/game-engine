@@ -20,6 +20,7 @@ nav:
       - Rendering & Scaling: concepts/rendering-and-scaling.md
       - Entity Model: concepts/entity-model.md
       - Input State: concepts/input-state.md
+      - Networking Model: concepts/networking-model.md
   - Systems:
       - Application: systems/application.md
       - Renderer: systems/renderer.md
@@ -28,10 +29,16 @@ nav:
       - Input: systems/input.md
       - Collision: systems/collision.md
       - Time: systems/time.md
+      - Networking:
+          - Overview: systems/networking/index.md
+          - Protocol: systems/networking/protocol.md
+          - Socket: systems/networking/socket.md
+          - Server Dispatch: systems/networking/server-dispatch.md
   - Guides:
       - Pause & Slow Motion: guides/pause-and-slow-motion.md
       - Toggle Scaling Mode: guides/toggle-scaling-mode.md
       - Configure Gravity: guides/configure-gravity.md
+      - Send a Request: guides/send-a-request.md
   - API Reference:
       - Application: reference/application.md
       - Renderer: reference/renderer.md
@@ -40,10 +47,16 @@ nav:
       - InputManager: reference/input-manager.md
       - Collision: reference/collision.md
       - Timeline: reference/timeline.md
+      - Protocol: reference/protocol.md
+      - Socket: reference/socket.md
+      - PlayerRegistry & ServerDispatch: reference/player-registry-and-server-dispatch.md
   - Architecture:
       - Overview: architecture/overview.md
       - Application Lifecycle: architecture/application-lifecycle.md
       - Timeline Ownership & Sampling: architecture/timeline-ownership-and-sampling.md
+      - Networking Threading Model: architecture/networking-threading-model.md
+  - Examples:
+      - Spare Parts: examples/spare-parts.md
 
 theme:
   name: material
