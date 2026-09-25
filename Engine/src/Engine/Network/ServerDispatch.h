@@ -27,4 +27,29 @@ namespace Engine
 	// per received request always has exactly one matching send — the REQ/REP
 	// alternation is never left unsatisfied.
 	std::vector<std::uint8_t> HandleRequest(PlayerRegistry& registry, const std::vector<std::uint8_t>& requestBytes);
+
+	// Applies one already-received request frame from a DEDICATED per-client session
+	// (Milestone 2 Section 4) that represents exactly one already-assigned
+	// `expectedPlayerId` — never a JOIN, and never any PlayerId other than its own.
+	// Unlike HandleRequest (the bootstrap listener's dispatch, which still assigns new
+	// players), a session must not accept JOIN at all, and must not let a client claim
+	// to be updating a different PlayerId than the one this session was created for —
+	// that would let one client silently overwrite another player's state.
+	//
+	// Dispatch:
+	//   STATE_UPDATE, State.Id == expectedPlayerId, Leaving=false -> UpdatePlayer();
+	//     Snapshot(expectedPlayerId, roster), or Error(UnknownPlayer) if the registry
+	//     no longer recognizes expectedPlayerId (e.g. already removed).
+	//   STATE_UPDATE, State.Id == expectedPlayerId, Leaving=true  -> RemovePlayer()
+	//     (idempotent); Snapshot(expectedPlayerId, roster).
+	//   STATE_UPDATE, State.Id != expectedPlayerId -> Error(UnknownPlayer); the
+	//     registry is left completely untouched (neither expectedPlayerId's nor the
+	//     claimed Id's entry is modified).
+	//   JOIN / SNAPSHOT / ERROR / JOIN_ACCEPTED / malformed -> Error(MalformedRequest);
+	//     registry untouched.
+	//
+	// Pure logic — no sockets — so this is unit-testable exactly like HandleRequest.
+	// Every branch returns exactly one reply frame.
+	std::vector<std::uint8_t> HandleSessionRequest(PlayerRegistry& registry, PlayerId expectedPlayerId,
+	                                                const std::vector<std::uint8_t>& requestBytes);
 }

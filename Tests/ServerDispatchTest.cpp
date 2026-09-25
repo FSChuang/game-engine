@@ -165,6 +165,108 @@ int main()
 		Check(registry.PlayerCount() == 0, "HandleRequest_ServerOnlyMessageTypeAsRequest_DoesNotMutateRegistry");
 	}
 
+	// --- HandleSessionRequest (dedicated per-client session dispatch, Milestone 2
+	// Section 4 checkpoint 2): identity-bound to one already-assigned PlayerId. ---
+
+	// STATE_UPDATE for the session's own expected PlayerId is accepted and reflected.
+	{
+		Engine::PlayerRegistry registry;
+		Engine::PlayerId id = *registry.AssignPlayer();
+
+		Engine::StateUpdate update{ Engine::PlayerState{ id, 10.0f, 20.0f, 1.0f, 2.0f }, false };
+		std::vector<std::uint8_t> reply =
+		    Engine::HandleSessionRequest(registry, id, Engine::EncodeStateUpdate(update));
+
+		std::optional<Engine::Snapshot> snapshot = DecodeAsSnapshot(reply);
+		Check(snapshot.has_value() && snapshot->RecipientId == id,
+		      "HandleSessionRequest_OwnPlayerId_RepliesWithSnapshot");
+
+		bool foundUpdated = false;
+		if (snapshot.has_value())
+		{
+			for (const Engine::PlayerState& state : snapshot->Roster)
+			{
+				if (state.Id == id)
+				{
+					foundUpdated = state.PositionX == 10.0f && state.PositionY == 20.0f && state.VelocityX == 1.0f &&
+					               state.VelocityY == 2.0f;
+				}
+			}
+		}
+		Check(foundUpdated, "HandleSessionRequest_OwnPlayerId_ReflectsNewStateInSnapshot");
+	}
+
+	// STATE_UPDATE claiming a DIFFERENT PlayerId than the one this session was created
+	// for is rejected, and neither player's registry entry is mutated (prevents one
+	// client from spoofing/overwriting another player's state).
+	{
+		Engine::PlayerRegistry registry;
+		Engine::PlayerId ownId = *registry.AssignPlayer();
+		Engine::PlayerId otherId = *registry.AssignPlayer();
+
+		Engine::StateUpdate spoof{ Engine::PlayerState{ otherId, 999.0f, 999.0f, 5.0f, 5.0f }, false };
+		std::vector<std::uint8_t> reply =
+		    Engine::HandleSessionRequest(registry, ownId, Engine::EncodeStateUpdate(spoof));
+
+		std::optional<Engine::ErrorResponse> error = DecodeAsError(reply);
+		Check(error.has_value() && error->Code == Engine::ErrorCode::UnknownPlayer,
+		      "HandleSessionRequest_WrongPlayerId_RepliesWithUnknownPlayerError");
+
+		bool otherUntouched = false;
+		bool ownUntouched = false;
+		for (const Engine::PlayerState& state : registry.Snapshot())
+		{
+			if (state.Id == otherId)
+			{
+				otherUntouched = state.PositionX == 0.0f && state.PositionY == 0.0f && state.VelocityX == 0.0f &&
+				                  state.VelocityY == 0.0f;
+			}
+			if (state.Id == ownId)
+			{
+				ownUntouched = state.PositionX == 0.0f && state.PositionY == 0.0f;
+			}
+		}
+		Check(otherUntouched, "HandleSessionRequest_WrongPlayerId_DoesNotMutateSpoofedTarget");
+		Check(ownUntouched, "HandleSessionRequest_WrongPlayerId_DoesNotMutateOwnSessionEither");
+	}
+
+	// A malformed request is rejected, never crashes, and produces exactly one reply.
+	{
+		Engine::PlayerRegistry registry;
+		Engine::PlayerId id = *registry.AssignPlayer();
+		std::vector<std::uint8_t> reply = Engine::HandleSessionRequest(registry, id, {});
+
+		std::optional<Engine::ErrorResponse> error = DecodeAsError(reply);
+		Check(error.has_value() && error->Code == Engine::ErrorCode::MalformedRequest,
+		      "HandleSessionRequest_MalformedRequest_RepliesWithMalformedRequestError");
+	}
+
+	// Leaving=true removes exactly the session's own expected PlayerId.
+	{
+		Engine::PlayerRegistry registry;
+		Engine::PlayerId id = *registry.AssignPlayer();
+		Engine::StateUpdate leave{ Engine::PlayerState{ id, 0.0f, 0.0f, 0.0f, 0.0f }, true };
+		std::vector<std::uint8_t> reply =
+		    Engine::HandleSessionRequest(registry, id, Engine::EncodeStateUpdate(leave));
+
+		std::optional<Engine::Snapshot> snapshot = DecodeAsSnapshot(reply);
+		Check(snapshot.has_value(), "HandleSessionRequest_Leaving_RepliesWithSnapshot");
+		Check(registry.PlayerCount() == 0, "HandleSessionRequest_Leaving_RemovesExpectedPlayerId");
+	}
+
+	// A dedicated session never accepts JOIN — that is bootstrap-only.
+	{
+		Engine::PlayerRegistry registry;
+		Engine::PlayerId id = *registry.AssignPlayer();
+		std::vector<std::uint8_t> reply =
+		    Engine::HandleSessionRequest(registry, id, Engine::EncodeJoinRequest());
+
+		std::optional<Engine::ErrorResponse> error = DecodeAsError(reply);
+		Check(error.has_value() && error->Code == Engine::ErrorCode::MalformedRequest,
+		      "HandleSessionRequest_JoinRequest_RejectedAsMalformed");
+		Check(registry.PlayerCount() == 1, "HandleSessionRequest_JoinRequest_DoesNotMutateRegistry");
+	}
+
 	std::printf("\n%s\n", g_Failures == 0 ? "All tests passed." : "Some tests FAILED.");
 	return g_Failures == 0 ? 0 : 1;
 }

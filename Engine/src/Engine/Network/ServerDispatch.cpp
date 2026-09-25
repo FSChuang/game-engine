@@ -72,4 +72,47 @@ namespace Engine
 		// malformed from the server's point of view.
 		return EncodeError(ErrorCode::MalformedRequest);
 	}
+
+	std::vector<std::uint8_t> HandleSessionRequest(PlayerRegistry& registry, PlayerId expectedPlayerId,
+	                                                const std::vector<std::uint8_t>& requestBytes)
+	{
+		std::optional<MessageType> type = PeekMessageType(requestBytes);
+		if (type != MessageType::StateUpdate)
+		{
+			// A dedicated session belongs to exactly one already-assigned player: it
+			// never accepts JOIN (that is bootstrap-only), and any other message
+			// direction here is malformed from this session's point of view.
+			return EncodeError(ErrorCode::MalformedRequest);
+		}
+
+		std::optional<StateUpdate> update = DecodeStateUpdate(requestBytes);
+		if (!update.has_value())
+		{
+			return EncodeError(ErrorCode::MalformedRequest);
+		}
+
+		if (update->State.Id != expectedPlayerId)
+		{
+			// Refuse to let a client claim to be updating a different PlayerId than
+			// the one this session was created for. The registry is left completely
+			// untouched — neither expectedPlayerId's nor the claimed Id's entry.
+			return EncodeError(ErrorCode::UnknownPlayer);
+		}
+
+		if (update->Leaving)
+		{
+			registry.RemovePlayer(expectedPlayerId);
+			return BuildSnapshotReply(registry, expectedPlayerId);
+		}
+
+		if (!registry.UpdatePlayer(update->State))
+		{
+			// expectedPlayerId matched the claim, but the registry no longer
+			// recognizes it (e.g. already removed) — same error HandleRequest uses
+			// for this case.
+			return EncodeError(ErrorCode::UnknownPlayer);
+		}
+
+		return BuildSnapshotReply(registry, expectedPlayerId);
+	}
 }
