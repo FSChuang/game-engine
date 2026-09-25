@@ -42,6 +42,11 @@ int main()
 		Check(snapshot.has_value(), "HandleRequest_Join_RepliesWithSnapshot");
 		Check(snapshot.has_value() && snapshot->RecipientId != 0, "HandleRequest_Join_AssignsNonZeroId");
 		Check(snapshot.has_value() && snapshot->Roster.size() == 1, "HandleRequest_Join_RosterContainsJustSelf");
+		// Milestone 2 Section 4 checkpoint 1: no real platform simulation exists yet,
+		// so every Snapshot must carry the documented neutral placeholder for now.
+		Check(snapshot.has_value() && snapshot->Platform.PositionX == 0.0f && snapshot->Platform.PositionY == 0.0f &&
+		          snapshot->Platform.VelocityX == 0.0f && snapshot->Platform.VelocityY == 0.0f,
+		      "HandleRequest_Join_PlatformIsNeutralPlaceholder");
 	}
 
 	// A second JOIN sees the first player already in its roster.
@@ -150,7 +155,8 @@ int main()
 	// rejected as malformed, not acted on.
 	{
 		Engine::PlayerRegistry registry;
-		std::vector<std::uint8_t> snapshotBytes = *Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} });
+		std::vector<std::uint8_t> snapshotBytes =
+		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, Engine::PlatformState{ 0.0f, 0.0f, 0.0f, 0.0f }, {} });
 		std::vector<std::uint8_t> reply = Engine::HandleRequest(registry, snapshotBytes);
 
 		std::optional<Engine::ErrorResponse> error = DecodeAsError(reply);

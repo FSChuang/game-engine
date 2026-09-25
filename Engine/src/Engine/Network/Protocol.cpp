@@ -7,13 +7,17 @@ namespace Engine
 	namespace
 	{
 		constexpr std::size_t MessageTypeSize = sizeof(std::uint8_t);
+		constexpr std::size_t Uint16FieldSize = sizeof(std::uint16_t);
 		constexpr std::size_t Uint32FieldSize = sizeof(std::uint32_t);
 		constexpr std::size_t PlayerStateWireSize = Uint32FieldSize * 5; // Id + 4 floats
+		constexpr std::size_t PlatformStateWireSize = Uint32FieldSize * 4; // 4 floats
 		constexpr std::size_t LeavingFlagSize = sizeof(std::uint8_t);
 		constexpr std::size_t JoinRequestWireSize = MessageTypeSize;
+		constexpr std::size_t JoinAcceptedWireSize = MessageTypeSize + Uint32FieldSize + Uint16FieldSize;
 		constexpr std::size_t StateUpdateWireSize = MessageTypeSize + PlayerStateWireSize + LeavingFlagSize;
 		constexpr std::size_t RosterCountSize = sizeof(std::uint8_t);
-		constexpr std::size_t SnapshotHeaderSize = MessageTypeSize + Uint32FieldSize + RosterCountSize;
+		constexpr std::size_t SnapshotHeaderSize =
+		    MessageTypeSize + Uint32FieldSize + PlatformStateWireSize + RosterCountSize;
 		constexpr std::size_t ErrorCodeSize = sizeof(std::uint8_t);
 		constexpr std::size_t ErrorWireSize = MessageTypeSize + ErrorCodeSize;
 
@@ -27,6 +31,13 @@ namespace Engine
 		{
 			bytes.push_back(static_cast<std::uint8_t>((value >> 24) & 0xFFu));
 			bytes.push_back(static_cast<std::uint8_t>((value >> 16) & 0xFFu));
+			bytes.push_back(static_cast<std::uint8_t>((value >> 8) & 0xFFu));
+			bytes.push_back(static_cast<std::uint8_t>(value & 0xFFu));
+		}
+
+		// Big-endian / network byte order, same convention as AppendUint32.
+		void AppendUint16(std::vector<std::uint8_t>& bytes, std::uint16_t value)
+		{
 			bytes.push_back(static_cast<std::uint8_t>((value >> 8) & 0xFFu));
 			bytes.push_back(static_cast<std::uint8_t>(value & 0xFFu));
 		}
@@ -45,6 +56,14 @@ namespace Engine
 			AppendFloat(bytes, state.PositionY);
 			AppendFloat(bytes, state.VelocityX);
 			AppendFloat(bytes, state.VelocityY);
+		}
+
+		void AppendPlatformState(std::vector<std::uint8_t>& bytes, const PlatformState& platform)
+		{
+			AppendFloat(bytes, platform.PositionX);
+			AppendFloat(bytes, platform.PositionY);
+			AppendFloat(bytes, platform.VelocityX);
+			AppendFloat(bytes, platform.VelocityY);
 		}
 
 		bool ReadUint8(const std::vector<std::uint8_t>& bytes, std::size_t offset, std::uint8_t& outValue)
@@ -67,6 +86,17 @@ namespace Engine
 			           (static_cast<std::uint32_t>(bytes[offset + 1]) << 16) |
 			           (static_cast<std::uint32_t>(bytes[offset + 2]) << 8) |
 			           static_cast<std::uint32_t>(bytes[offset + 3]);
+			return true;
+		}
+
+		bool ReadUint16(const std::vector<std::uint8_t>& bytes, std::size_t offset, std::uint16_t& outValue)
+		{
+			if (offset + sizeof(std::uint16_t) > bytes.size())
+			{
+				return false;
+			}
+			outValue = static_cast<std::uint16_t>((static_cast<std::uint16_t>(bytes[offset]) << 8) |
+			                                       static_cast<std::uint16_t>(bytes[offset + 1]));
 			return true;
 		}
 
@@ -99,6 +129,23 @@ namespace Engine
 			outState = PlayerState{ id, positionX, positionY, velocityX, velocityY };
 			return true;
 		}
+
+		bool ReadPlatformState(const std::vector<std::uint8_t>& bytes, std::size_t offset, PlatformState& outPlatform)
+		{
+			float positionX;
+			float positionY;
+			float velocityX;
+			float velocityY;
+			if (!ReadFloat(bytes, offset, positionX) ||
+			    !ReadFloat(bytes, offset + Uint32FieldSize, positionY) ||
+			    !ReadFloat(bytes, offset + Uint32FieldSize * 2, velocityX) ||
+			    !ReadFloat(bytes, offset + Uint32FieldSize * 3, velocityY))
+			{
+				return false;
+			}
+			outPlatform = PlatformState{ positionX, positionY, velocityX, velocityY };
+			return true;
+		}
 	}
 
 	std::vector<std::uint8_t> EncodeJoinRequest()
@@ -106,6 +153,16 @@ namespace Engine
 		std::vector<std::uint8_t> bytes;
 		bytes.reserve(JoinRequestWireSize);
 		AppendUint8(bytes, static_cast<std::uint8_t>(MessageType::Join));
+		return bytes;
+	}
+
+	std::vector<std::uint8_t> EncodeJoinAccepted(const JoinAccepted& accepted)
+	{
+		std::vector<std::uint8_t> bytes;
+		bytes.reserve(JoinAcceptedWireSize);
+		AppendUint8(bytes, static_cast<std::uint8_t>(MessageType::JoinAccepted));
+		AppendUint32(bytes, accepted.AssignedId);
+		AppendUint16(bytes, accepted.AssignedPort);
 		return bytes;
 	}
 
@@ -130,6 +187,7 @@ namespace Engine
 		bytes.reserve(SnapshotHeaderSize + PlayerStateWireSize * snapshot.Roster.size());
 		AppendUint8(bytes, static_cast<std::uint8_t>(MessageType::Snapshot));
 		AppendUint32(bytes, snapshot.RecipientId);
+		AppendPlatformState(bytes, snapshot.Platform);
 		AppendUint8(bytes, static_cast<std::uint8_t>(snapshot.Roster.size()));
 		for (const PlayerState& state : snapshot.Roster)
 		{
@@ -152,6 +210,34 @@ namespace Engine
 		}
 
 		return JoinRequest{};
+	}
+
+	std::optional<JoinAccepted> DecodeJoinAccepted(const std::vector<std::uint8_t>& bytes)
+	{
+		if (bytes.size() != JoinAcceptedWireSize)
+		{
+			return std::nullopt;
+		}
+
+		std::uint8_t type;
+		if (!ReadUint8(bytes, 0, type) || type != static_cast<std::uint8_t>(MessageType::JoinAccepted))
+		{
+			return std::nullopt;
+		}
+
+		std::uint32_t assignedId;
+		if (!ReadUint32(bytes, MessageTypeSize, assignedId))
+		{
+			return std::nullopt;
+		}
+
+		std::uint16_t assignedPort;
+		if (!ReadUint16(bytes, MessageTypeSize + Uint32FieldSize, assignedPort))
+		{
+			return std::nullopt;
+		}
+
+		return JoinAccepted{ assignedId, assignedPort };
 	}
 
 	std::optional<StateUpdate> DecodeStateUpdate(const std::vector<std::uint8_t>& bytes)
@@ -202,8 +288,14 @@ namespace Engine
 			return std::nullopt;
 		}
 
+		PlatformState platform;
+		if (!ReadPlatformState(bytes, MessageTypeSize + Uint32FieldSize, platform))
+		{
+			return std::nullopt;
+		}
+
 		std::uint8_t rosterCount;
-		if (!ReadUint8(bytes, MessageTypeSize + Uint32FieldSize, rosterCount))
+		if (!ReadUint8(bytes, MessageTypeSize + Uint32FieldSize + PlatformStateWireSize, rosterCount))
 		{
 			return std::nullopt;
 		}
@@ -233,7 +325,7 @@ namespace Engine
 			offset += PlayerStateWireSize;
 		}
 
-		return Snapshot{ recipientId, std::move(roster) };
+		return Snapshot{ recipientId, platform, std::move(roster) };
 	}
 
 	std::vector<std::uint8_t> EncodeError(ErrorCode code)
@@ -288,6 +380,7 @@ namespace Engine
 			case MessageType::StateUpdate:
 			case MessageType::Snapshot:
 			case MessageType::Error:
+			case MessageType::JoinAccepted:
 				return static_cast<MessageType>(bytes[0]);
 		}
 

@@ -4,12 +4,18 @@ namespace Engine
 {
 	namespace
 	{
+		// Milestone 2 Section 4 checkpoint 1 (protocol only): real server-time platform
+		// simulation isn't implemented yet, so every Snapshot reports this neutral,
+		// all-zero placeholder until a later checkpoint wires in the actual
+		// pure-function-of-steady_clock position (Design 1, no platform thread/mutex).
+		constexpr PlatformState NeutralPlatformState{ 0.0f, 0.0f, 0.0f, 0.0f };
+
 		// The registry enforces MaxPlayers, so a Snapshot built from its own current
 		// contents always encodes successfully — the nullopt case in EncodeSnapshot
 		// cannot trigger here.
 		std::vector<std::uint8_t> BuildSnapshotReply(const PlayerRegistry& registry, PlayerId recipientId)
 		{
-			return *EncodeSnapshot(Snapshot{ recipientId, registry.Snapshot() });
+			return *EncodeSnapshot(Snapshot{ recipientId, NeutralPlatformState, registry.Snapshot() });
 		}
 	}
 

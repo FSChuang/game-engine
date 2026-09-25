@@ -27,10 +27,21 @@ static Engine::PlayerState MakeState(Engine::PlayerId id, float positionX, float
 	return Engine::PlayerState{ id, positionX, positionY, velocityX, velocityY };
 }
 
+static Engine::PlatformState MakePlatform(float positionX, float positionY, float velocityX, float velocityY)
+{
+	return Engine::PlatformState{ positionX, positionY, velocityX, velocityY };
+}
+
 static bool StatesEqual(const Engine::PlayerState& a, const Engine::PlayerState& b)
 {
 	return a.Id == b.Id && a.PositionX == b.PositionX && a.PositionY == b.PositionY &&
 	       a.VelocityX == b.VelocityX && a.VelocityY == b.VelocityY;
+}
+
+static bool PlatformsEqual(const Engine::PlatformState& a, const Engine::PlatformState& b)
+{
+	return a.PositionX == b.PositionX && a.PositionY == b.PositionY && a.VelocityX == b.VelocityX &&
+	       a.VelocityY == b.VelocityY;
 }
 
 int main()
@@ -40,6 +51,35 @@ int main()
 		std::vector<std::uint8_t> encoded = Engine::EncodeJoinRequest();
 		std::optional<Engine::JoinRequest> decoded = Engine::DecodeJoinRequest(encoded);
 		Check(decoded.has_value(), "JoinRequest_RoundTrip_Succeeds");
+	}
+
+	// JOIN_ACCEPTED round-trip, preserving both fields exactly (Milestone 2 Section 4:
+	// not yet used by the running system — protocol-only at this checkpoint).
+	{
+		Engine::JoinAccepted accepted{ 42, 5561 };
+		std::vector<std::uint8_t> encoded = Engine::EncodeJoinAccepted(accepted);
+		std::optional<Engine::JoinAccepted> decoded = Engine::DecodeJoinAccepted(encoded);
+
+		Check(decoded.has_value(), "JoinAccepted_RoundTrip_Succeeds");
+		Check(decoded.has_value() && decoded->AssignedId == 42, "JoinAccepted_RoundTrip_PreservesAssignedId");
+		Check(decoded.has_value() && decoded->AssignedPort == 5561, "JoinAccepted_RoundTrip_PreservesAssignedPort");
+	}
+
+	// JOIN_ACCEPTED rejects wrong type, truncated, and extra-trailing-byte input.
+	{
+		std::vector<std::uint8_t> wrongType = Engine::EncodeJoinRequest();
+		wrongType.push_back(0);
+		wrongType.push_back(0);
+		wrongType.push_back(0); // pad to JoinAccepted's exact size, but the leading byte says JOIN
+		Check(!Engine::DecodeJoinAccepted(wrongType).has_value(), "DecodeJoinAccepted_WrongMessageType_Rejected");
+
+		std::vector<std::uint8_t> truncated = Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1 });
+		truncated.resize(truncated.size() - 1);
+		Check(!Engine::DecodeJoinAccepted(truncated).has_value(), "DecodeJoinAccepted_Truncated_Rejected");
+
+		std::vector<std::uint8_t> plusExtra = Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1 });
+		plusExtra.push_back(0xFF);
+		Check(!Engine::DecodeJoinAccepted(plusExtra).has_value(), "DecodeJoinAccepted_ExtraTrailingByte_Rejected");
 	}
 
 	// STATE_UPDATE round-trip, preserving every field exactly.
@@ -66,20 +106,24 @@ int main()
 		Check(decoded.has_value() && decoded->Leaving == true, "StateUpdate_RoundTrip_PreservesLeavingTrue");
 	}
 
-	// SNAPSHOT round-trip with zero players.
+	// SNAPSHOT round-trip with zero players and a zero PlatformState.
 	{
-		Engine::Snapshot snapshot{ 1, {} };
+		Engine::Snapshot snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {} };
 		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
 		Check(encoded.has_value(), "Snapshot_EncodeEmptyRoster_Succeeds");
 
 		std::optional<Engine::Snapshot> decoded = Engine::DecodeSnapshot(*encoded);
 		Check(decoded.has_value() && decoded->RecipientId == 1, "Snapshot_RoundTrip_EmptyRoster_PreservesRecipientId");
 		Check(decoded.has_value() && decoded->Roster.empty(), "Snapshot_RoundTrip_EmptyRoster_HasNoPlayers");
+		Check(decoded.has_value() && PlatformsEqual(decoded->Platform, snapshot.Platform),
+		      "Snapshot_RoundTrip_ZeroPlatformState_PreservedExactly");
 	}
 
-	// SNAPSHOT round-trip with one player.
+	// SNAPSHOT round-trip with one player and a nontrivial PlatformState, including
+	// negative velocity.
 	{
-		Engine::Snapshot snapshot{ 2, { MakeState(2, 1.0f, 2.0f, 3.0f, 4.0f) } };
+		Engine::Snapshot snapshot{ 2, MakePlatform(500.25f, -300.5f, -12.5f, 6.75f),
+			                        { MakeState(2, 1.0f, 2.0f, 3.0f, 4.0f) } };
 		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
 		std::optional<Engine::Snapshot> decoded = Engine::DecodeSnapshot(*encoded);
 
@@ -87,12 +131,16 @@ int main()
 		Check(decoded.has_value() && decoded->Roster.size() == 1, "Snapshot_RoundTrip_OnePlayer_HasOneEntry");
 		Check(decoded.has_value() && StatesEqual(decoded->Roster[0], snapshot.Roster[0]),
 		      "Snapshot_RoundTrip_OnePlayer_PreservesState");
+		Check(decoded.has_value() && PlatformsEqual(decoded->Platform, snapshot.Platform),
+		      "Snapshot_RoundTrip_OnePlayer_PreservesNontrivialPlatformStateWithNegativeVelocity");
 	}
 
-	// SNAPSHOT round-trip with at least 3 players (assignment's minimum client count).
+	// SNAPSHOT round-trip with at least 3 players (assignment's minimum client count)
+	// and a distinct nontrivial PlatformState.
 	{
 		Engine::Snapshot snapshot{
 			5,
+			MakePlatform(-1000.0f, 940.0f, 150.0f, -25.5f),
 			{ MakeState(1, 1.0f, 1.0f, 0.0f, 0.0f), MakeState(2, 2.0f, 2.0f, 0.0f, 0.0f),
 			  MakeState(3, 3.0f, 3.0f, 0.0f, 0.0f) }
 		};
@@ -107,11 +155,13 @@ int main()
 			allMatch = StatesEqual(decoded->Roster[i], snapshot.Roster[i]);
 		}
 		Check(allMatch, "Snapshot_RoundTrip_ThreePlayers_PreservesEachState");
+		Check(decoded.has_value() && PlatformsEqual(decoded->Platform, snapshot.Platform),
+		      "Snapshot_RoundTrip_ThreePlayers_PreservesPlatformState");
 	}
 
 	// SNAPSHOT supports exactly MaxPlayers entries.
 	{
-		Engine::Snapshot snapshot{ 9, {} };
+		Engine::Snapshot snapshot{ 9, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {} };
 		for (std::size_t i = 0; i < Engine::MaxPlayers; ++i)
 		{
 			snapshot.Roster.push_back(MakeState(static_cast<Engine::PlayerId>(i + 1), 0.0f, 0.0f, 0.0f, 0.0f));
@@ -127,7 +177,7 @@ int main()
 
 	// Encoding a roster larger than MaxPlayers is rejected.
 	{
-		Engine::Snapshot snapshot{ 1, {} };
+		Engine::Snapshot snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {} };
 		for (std::size_t i = 0; i < Engine::MaxPlayers + 1; ++i)
 		{
 			snapshot.Roster.push_back(MakeState(static_cast<Engine::PlayerId>(i + 1), 0.0f, 0.0f, 0.0f, 0.0f));
@@ -151,10 +201,20 @@ int main()
 
 	// Truncated SNAPSHOT: header declares one player, but the buffer has no player bytes.
 	{
-		Engine::Snapshot snapshot{ 1, { MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f) } };
+		Engine::Snapshot snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f),
+			                        { MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f) } };
 		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
 		encoded->resize(encoded->size() - 5); // chop into the middle of the one player entry
 		Check(!Engine::DecodeSnapshot(*encoded).has_value(), "DecodeSnapshot_Truncated_Rejected");
+	}
+
+	// Truncated SNAPSHOT: cut short inside the PlatformState fields themselves (before
+	// the roster-count byte is even reached), distinct from truncating inside the roster.
+	{
+		Engine::Snapshot snapshot{ 1, MakePlatform(1.0f, 2.0f, 3.0f, 4.0f), {} };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		encoded->resize(encoded->size() - 3); // chop into the middle of the last platform float
+		Check(!Engine::DecodeSnapshot(*encoded).has_value(), "DecodeSnapshot_TruncatedPlatformState_Rejected");
 	}
 
 	// Unknown/wrong message type is rejected by every decoder, even at a size that
@@ -165,17 +225,19 @@ int main()
 		Check(!Engine::DecodeStateUpdate(wrongType).has_value(), "DecodeStateUpdate_UnknownMessageType_Rejected");
 
 		std::vector<std::uint8_t> snapshotBytesFedToJoin =
-		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} });
+		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {} });
 		snapshotBytesFedToJoin.resize(1); // trim to JOIN's expected size, but the type byte says SNAPSHOT
 		Check(!Engine::DecodeJoinRequest(snapshotBytesFedToJoin).has_value(),
 		      "DecodeJoinRequest_WrongMessageType_Rejected");
 	}
 
 	// Malformed roster count (exceeds MaxPlayers) is rejected even if paired with a
-	// buffer length that matches the (invalid) declared count.
+	// buffer length that matches the (invalid) declared count. For an empty-roster
+	// Snapshot, the roster-count byte is always the last byte of the encoded buffer.
 	{
-		std::vector<std::uint8_t> malformed = *Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} });
-		malformed[5] = static_cast<std::uint8_t>(Engine::MaxPlayers + 1); // roster-count byte
+		std::vector<std::uint8_t> malformed =
+		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {} });
+		malformed[malformed.size() - 1] = static_cast<std::uint8_t>(Engine::MaxPlayers + 1);
 		Check(!Engine::DecodeSnapshot(malformed).has_value(), "DecodeSnapshot_RosterCountExceedsMaxPlayers_Rejected");
 	}
 
@@ -190,7 +252,8 @@ int main()
 		statePlusExtra.push_back(0xFF);
 		Check(!Engine::DecodeStateUpdate(statePlusExtra).has_value(), "DecodeStateUpdate_ExtraTrailingByte_Rejected");
 
-		std::vector<std::uint8_t> snapshotPlusExtra = *Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} });
+		std::vector<std::uint8_t> snapshotPlusExtra =
+		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {} });
 		snapshotPlusExtra.push_back(0xFF);
 		Check(!Engine::DecodeSnapshot(snapshotPlusExtra).has_value(), "DecodeSnapshot_ExtraTrailingByte_Rejected");
 	}
@@ -226,10 +289,14 @@ int main()
 	{
 		Check(Engine::PeekMessageType(Engine::EncodeJoinRequest()) == Engine::MessageType::Join,
 		      "PeekMessageType_Join_Identified");
+		Check(Engine::PeekMessageType(Engine::EncodeJoinAccepted(Engine::JoinAccepted{ 1, 1 })) ==
+		          Engine::MessageType::JoinAccepted,
+		      "PeekMessageType_JoinAccepted_Identified");
 		Check(Engine::PeekMessageType(Engine::EncodeStateUpdate({ MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f), false })) ==
 		          Engine::MessageType::StateUpdate,
 		      "PeekMessageType_StateUpdate_Identified");
-		Check(Engine::PeekMessageType(*Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} })) ==
+		Check(Engine::PeekMessageType(
+		          *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {} })) ==
 		          Engine::MessageType::Snapshot,
 		      "PeekMessageType_Snapshot_Identified");
 		Check(Engine::PeekMessageType(Engine::EncodeError(Engine::ErrorCode::MalformedRequest)) ==

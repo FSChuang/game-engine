@@ -35,6 +35,7 @@ namespace Engine
 		StateUpdate = 2,
 		Snapshot = 3,
 		Error = 4,
+		JoinAccepted = 5,
 	};
 
 	// Failure reasons the server can report back to a client in place of a Snapshot
@@ -52,6 +53,19 @@ namespace Engine
 	{
 	};
 
+	// server -> client: reply to JOIN once dedicated per-client server sessions exist
+	// (Milestone 2 Section 4). Carries the assigned player ID and the port of this
+	// client's dedicated session; the client derives the full endpoint by reusing its
+	// bootstrap endpoint's host and substituting this port — no endpoint string is ever
+	// encoded. Not yet used by the running system as of this checkpoint (see
+	// ServerDispatch/NetworkClient): this is a protocol-only addition, fully tested in
+	// isolation ahead of the dedicated-session work that will actually send it.
+	struct JoinAccepted
+	{
+		PlayerId AssignedId;
+		std::uint16_t AssignedPort;
+	};
+
 	// client -> server: reports the sender's own latest state. `Leaving` is set on a
 	// clean disconnect so the server can remove the player from its roster.
 	struct StateUpdate
@@ -60,13 +74,26 @@ namespace Engine
 		bool Leaving;
 	};
 
-	// server -> client: the recipient's own ID (assigned once at JOIN, then echoed on
-	// every later reply) plus every currently active player's state. The reply to a
-	// JOIN and the reply to a STATE_UPDATE share this one wire shape (KISS: one shape
-	// instead of a separate WELCOME message).
+	// The one server-authoritative moving platform's current state (Milestone 2
+	// Section 4). Exactly one platform — no ID, no array, no generic
+	// replicated-entity concept; if a second shared object is ever needed, that is
+	// the day this gets revisited, not before.
+	struct PlatformState
+	{
+		float PositionX;
+		float PositionY;
+		float VelocityX;
+		float VelocityY;
+	};
+
+	// server -> client: the recipient's own ID, the shared platform's current state,
+	// and every currently active player's state. Reply to a STATE_UPDATE (and, as of
+	// this checkpoint, still the reply to JOIN too — see JoinAccepted above for the
+	// message that will take over JOIN's reply once dedicated sessions exist).
 	struct Snapshot
 	{
 		PlayerId RecipientId;
+		PlatformState Platform;
 		std::vector<PlayerState> Roster;
 	};
 
@@ -85,6 +112,7 @@ namespace Engine
 	// so the wire format never depends on compiler padding, alignment, or object layout.
 
 	std::vector<std::uint8_t> EncodeJoinRequest();
+	std::vector<std::uint8_t> EncodeJoinAccepted(const JoinAccepted& accepted);
 	std::vector<std::uint8_t> EncodeStateUpdate(const StateUpdate& update);
 
 	// Returns std::nullopt if snapshot.Roster.size() exceeds MaxPlayers, rather than
@@ -98,6 +126,7 @@ namespace Engine
 	// oversized-roster input. Never throws, never reads out of bounds.
 
 	std::optional<JoinRequest> DecodeJoinRequest(const std::vector<std::uint8_t>& bytes);
+	std::optional<JoinAccepted> DecodeJoinAccepted(const std::vector<std::uint8_t>& bytes);
 	std::optional<StateUpdate> DecodeStateUpdate(const std::vector<std::uint8_t>& bytes);
 	std::optional<Snapshot> DecodeSnapshot(const std::vector<std::uint8_t>& bytes);
 	std::optional<ErrorResponse> DecodeError(const std::vector<std::uint8_t>& bytes);
