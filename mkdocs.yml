@@ -13,8 +13,21 @@ nav:
   - Getting Started:
       - Installation: getting-started/installation.md
       - Build & Run: getting-started/build-and-run.md
+  - Concepts:
+      - Application Loop: concepts/application-loop.md
+      - Logical Time: concepts/logical-time.md
+  - Systems:
+      - Application: systems/application.md
+      - Time: systems/time.md
+  - Guides:
+      - Pause & Slow Motion: guides/pause-and-slow-motion.md
+  - API Reference:
+      - Application: reference/application.md
+      - Timeline: reference/timeline.md
   - Architecture:
       - Overview: architecture/overview.md
+      - Application Lifecycle: architecture/application-lifecycle.md
+      - Timeline Ownership & Sampling: architecture/timeline-ownership-and-sampling.md
 
 theme:
   name: material

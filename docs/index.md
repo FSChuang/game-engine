@@ -53,8 +53,8 @@ deterministic timing, and simple multiplayer networking.
 
 <div class="ge-card-grid" markdown>
 
-<div class="ge-card ge-card--static" markdown>
-<p class="ge-card__title">Application</p>
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Application](systems/application.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">Owns the SDL lifecycle and the main update/render loop.</p>
 <span class="ge-card__tag">Core</span>
 </div>
@@ -89,8 +89,8 @@ deterministic timing, and simple multiplayer networking.
 <span class="ge-card__tag">Core</span>
 </div>
 
-<div class="ge-card ge-card--static" markdown>
-<p class="ge-card__title">Time</p>
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Time](systems/time.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">Logical time: scale, pause, and tic size, independent of the wall clock.</p>
 <span class="ge-card__tag">Core</span>
 </div>
@@ -103,8 +103,9 @@ deterministic timing, and simple multiplayer networking.
 
 </div>
 
-*Individual system pages are coming in a later documentation pass — see the
-[Architecture Overview](architecture/overview.md) for how these fit together today.*
+*Application and Time now have full system pages — the rest are coming in a
+later documentation pass; see the [Architecture Overview](architecture/overview.md)
+for how they all fit together today.*
 
 ## Architecture, briefly
 

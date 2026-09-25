@@ -235,25 +235,47 @@
 }
 
 .ge-card {
+	position: relative; /* anchoring point for .ge-card__link's stretched hit area */
 	display: block;
 	padding: 1rem 1.1rem;
 	background-color: var(--ge-surface);
 	border: 1px solid var(--ge-border);
 	border-radius: var(--ge-radius-md);
-	text-decoration: none !important;
-	color: var(--ge-text) !important;
+	color: var(--ge-text);
 	transition: transform var(--ge-transition-fast), box-shadow var(--ge-transition-fast),
 		border-color var(--ge-transition-fast);
 }
 
-a.ge-card:hover,
-a.ge-card:focus-visible {
+/* A clickable card is a <div class="ge-card ge-card--linked"> containing a
+   real, plain inline link (`.ge-card__link`, on the title text) — never a
+   <div> or <a> wrapping block-level content directly. Markdown's HTML-block
+   parser doesn't reliably nest further Markdown/attr_list processing inside
+   a multi-line <a>...</a> the way it does inside a <div>...</div>, so the
+   link stays a small inline element and is stretched to cover the whole
+   card via ::after — the standard, accessible "clickable card" pattern.
+   `.ge-card--linked` is the explicit marker (paired with the existing
+   `.ge-card--static`) rather than a `:has()` selector, for wider browser
+   support. */
+.ge-card__link {
+	color: inherit;
+	text-decoration: none !important;
+}
+
+.ge-card__link::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+}
+
+.ge-card--linked:hover,
+.ge-card--linked:focus-within {
 	transform: translateY(-2px);
 	box-shadow: var(--ge-shadow-soft);
 	border-color: var(--ge-accent);
 }
 
-.ge-card:focus-visible {
+.ge-card__link:focus-visible {
 	outline: 2px solid var(--ge-accent);
 	outline-offset: 2px;
 }
@@ -271,7 +293,7 @@ a.ge-card:focus-visible {
 	color: var(--ge-accent);
 }
 
-a.ge-card:hover .ge-card__arrow {
+.ge-card--linked:hover .ge-card__arrow {
 	transform: translateX(3px);
 }
 
@@ -348,6 +370,42 @@ a.ge-card:hover .ge-card__arrow {
 	.ge-contract dt:first-child {
 		margin-top: 0;
 	}
+}
+
+/* ---- Reference-page metadata row (Milestone 2 documentation Phase 2A) ----
+   A compact strip of label/value pairs near the top of a Reference page —
+   deliberately NOT the full System Contract panel (that stays System-page
+   only). Generic and token-based, like every other component here, so it
+   works for any future Reference page without new CSS. */
+.ge-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 1.5rem;
+	padding: 0.7rem 1rem;
+	margin: 1rem 0 1.5rem;
+	background-color: var(--ge-surface);
+	border: 1px solid var(--ge-border);
+	border-radius: var(--ge-radius-sm);
+}
+
+.ge-meta__item {
+	display: flex;
+	align-items: baseline;
+	gap: 0.4rem;
+	font-size: 0.66rem;
+}
+
+.ge-meta__label {
+	color: var(--ge-muted);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	font-size: 0.6rem;
+	white-space: nowrap;
+}
+
+.ge-meta__value code {
+	font-size: 0.66rem;
 }
 
 /* ---- Accessibility: respect reduced-motion preferences for every custom

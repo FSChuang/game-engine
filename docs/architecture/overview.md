@@ -201,3 +201,25 @@ is demonstrated once, on the engine's highest-stakes threading contract:
     `EngineNetworkCore` (protocol + registry + dispatch) has **zero**
     dependency on `Socket` or ZeroMQ. You can unit-test an entire
     request/reply exchange without a real socket ever existing.
+
+## Where to go deeper
+
+Two systems now have a full documentation slice — Concepts, System page,
+API Reference, and their own Architecture page:
+
+<div class="ge-card-grid" markdown>
+
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Application Lifecycle](application-lifecycle.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
+<p class="ge-card__purpose">Construction/destruction order, and why Renderer must be destroyed before <code>SDL_Quit()</code>.</p>
+</div>
+
+<div class="ge-card ge-card--linked" markdown>
+<p class="ge-card__title" markdown>[Timeline Ownership & Sampling](timeline-ownership-and-sampling.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
+<p class="ge-card__purpose">Parent/child composition, anchor sampling order, and the pending-delta mechanism.</p>
+</div>
+
+</div>
+
+Everything else on this page still describes today's *whole-engine* picture;
+per-system depth arrives one slice at a time.
