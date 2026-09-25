@@ -29,6 +29,16 @@ add_executable(TimelineTests TimelineTest.cpp)
 target_link_libraries(TimelineTests PRIVATE Engine)
 add_test(NAME TimelineTests COMMAND TimelineTests)
 
+# Pure protocol/registry logic (Milestone 2 Section 2): no ZeroMQ dependency, so
+# these always build and run regardless of whether cppzmq was found.
+add_executable(NetworkProtocolTests NetworkProtocolTest.cpp)
+target_link_libraries(NetworkProtocolTests PRIVATE EngineNetworkCore)
+add_test(NAME NetworkProtocolTests COMMAND NetworkProtocolTests)
+
+add_executable(PlayerRegistryTests PlayerRegistryTest.cpp)
+target_link_libraries(PlayerRegistryTests PRIVATE EngineNetworkCore)
+add_test(NAME PlayerRegistryTests COMMAND PlayerRegistryTests)
+
 # Headless smoke executables proving Engine::Socket's REQ/REP halves work end to
 # end (Milestone 2 Section 2). Manually run, not CTest-registered (see
 # NetworkSmoke/SmokeServer.cpp / SmokeClient.cpp for why). Built only when

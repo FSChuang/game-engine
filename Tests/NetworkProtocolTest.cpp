@@ -1,0 +1,200 @@
+// Focused unit tests for Engine's network protocol encode/decode (ENGINEERING_SPEC.md
+// §10). Pure logic, no sockets, no SDL. Floats round-trip through their exact IEEE-754
+// bit pattern, so exact equality is valid here — no epsilon comparison needed.
+
+#include "Engine/Network/Protocol.h"
+
+#include <cstdio>
+
+static int g_Failures = 0;
+
+static void Check(bool condition, const char* name)
+{
+	if (condition)
+	{
+		std::printf("[PASS] %s\n", name);
+	}
+	else
+	{
+		std::printf("[FAIL] %s\n", name);
+		++g_Failures;
+	}
+}
+
+static Engine::PlayerState MakeState(Engine::PlayerId id, float positionX, float positionY, float velocityX,
+                                      float velocityY)
+{
+	return Engine::PlayerState{ id, positionX, positionY, velocityX, velocityY };
+}
+
+static bool StatesEqual(const Engine::PlayerState& a, const Engine::PlayerState& b)
+{
+	return a.Id == b.Id && a.PositionX == b.PositionX && a.PositionY == b.PositionY &&
+	       a.VelocityX == b.VelocityX && a.VelocityY == b.VelocityY;
+}
+
+int main()
+{
+	// JOIN round-trip.
+	{
+		std::vector<std::uint8_t> encoded = Engine::EncodeJoinRequest();
+		std::optional<Engine::JoinRequest> decoded = Engine::DecodeJoinRequest(encoded);
+		Check(decoded.has_value(), "JoinRequest_RoundTrip_Succeeds");
+	}
+
+	// STATE_UPDATE round-trip, preserving every field exactly.
+	{
+		Engine::StateUpdate update{ MakeState(7, 100.5f, -40.25f, 12.0f, -3.5f), false };
+		std::vector<std::uint8_t> encoded = Engine::EncodeStateUpdate(update);
+		std::optional<Engine::StateUpdate> decoded = Engine::DecodeStateUpdate(encoded);
+
+		Check(decoded.has_value(), "StateUpdate_RoundTrip_Succeeds");
+		Check(decoded->State.Id == 7, "StateUpdate_RoundTrip_PreservesPlayerId");
+		Check(decoded->State.PositionX == 100.5f, "StateUpdate_RoundTrip_PreservesPositionX");
+		Check(decoded->State.PositionY == -40.25f, "StateUpdate_RoundTrip_PreservesPositionY");
+		Check(decoded->State.VelocityX == 12.0f, "StateUpdate_RoundTrip_PreservesVelocityX");
+		Check(decoded->State.VelocityY == -3.5f, "StateUpdate_RoundTrip_PreservesVelocityY");
+		Check(decoded->Leaving == false, "StateUpdate_RoundTrip_PreservesLeavingFalse");
+	}
+
+	// STATE_UPDATE preserves a true leaving flag distinctly from false.
+	{
+		Engine::StateUpdate update{ MakeState(3, 0.0f, 0.0f, 0.0f, 0.0f), true };
+		std::vector<std::uint8_t> encoded = Engine::EncodeStateUpdate(update);
+		std::optional<Engine::StateUpdate> decoded = Engine::DecodeStateUpdate(encoded);
+
+		Check(decoded.has_value() && decoded->Leaving == true, "StateUpdate_RoundTrip_PreservesLeavingTrue");
+	}
+
+	// SNAPSHOT round-trip with zero players.
+	{
+		Engine::Snapshot snapshot{ 1, {} };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		Check(encoded.has_value(), "Snapshot_EncodeEmptyRoster_Succeeds");
+
+		std::optional<Engine::Snapshot> decoded = Engine::DecodeSnapshot(*encoded);
+		Check(decoded.has_value() && decoded->RecipientId == 1, "Snapshot_RoundTrip_EmptyRoster_PreservesRecipientId");
+		Check(decoded.has_value() && decoded->Roster.empty(), "Snapshot_RoundTrip_EmptyRoster_HasNoPlayers");
+	}
+
+	// SNAPSHOT round-trip with one player.
+	{
+		Engine::Snapshot snapshot{ 2, { MakeState(2, 1.0f, 2.0f, 3.0f, 4.0f) } };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		std::optional<Engine::Snapshot> decoded = Engine::DecodeSnapshot(*encoded);
+
+		Check(decoded.has_value() && decoded->RecipientId == 2, "Snapshot_RoundTrip_OnePlayer_PreservesRecipientId");
+		Check(decoded.has_value() && decoded->Roster.size() == 1, "Snapshot_RoundTrip_OnePlayer_HasOneEntry");
+		Check(decoded.has_value() && StatesEqual(decoded->Roster[0], snapshot.Roster[0]),
+		      "Snapshot_RoundTrip_OnePlayer_PreservesState");
+	}
+
+	// SNAPSHOT round-trip with at least 3 players (assignment's minimum client count).
+	{
+		Engine::Snapshot snapshot{
+			5,
+			{ MakeState(1, 1.0f, 1.0f, 0.0f, 0.0f), MakeState(2, 2.0f, 2.0f, 0.0f, 0.0f),
+			  MakeState(3, 3.0f, 3.0f, 0.0f, 0.0f) }
+		};
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		std::optional<Engine::Snapshot> decoded = Engine::DecodeSnapshot(*encoded);
+
+		Check(decoded.has_value() && decoded->RecipientId == 5, "Snapshot_RoundTrip_ThreePlayers_PreservesRecipientId");
+		Check(decoded.has_value() && decoded->Roster.size() == 3, "Snapshot_RoundTrip_ThreePlayers_HasThreeEntries");
+		bool allMatch = decoded.has_value() && decoded->Roster.size() == 3;
+		for (std::size_t i = 0; allMatch && i < 3; ++i)
+		{
+			allMatch = StatesEqual(decoded->Roster[i], snapshot.Roster[i]);
+		}
+		Check(allMatch, "Snapshot_RoundTrip_ThreePlayers_PreservesEachState");
+	}
+
+	// SNAPSHOT supports exactly MaxPlayers entries.
+	{
+		Engine::Snapshot snapshot{ 9, {} };
+		for (std::size_t i = 0; i < Engine::MaxPlayers; ++i)
+		{
+			snapshot.Roster.push_back(MakeState(static_cast<Engine::PlayerId>(i + 1), 0.0f, 0.0f, 0.0f, 0.0f));
+		}
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		Check(encoded.has_value(), "Snapshot_EncodeMaxPlayers_Succeeds");
+
+		std::optional<Engine::Snapshot> decoded = encoded.has_value() ? Engine::DecodeSnapshot(*encoded)
+		                                                               : std::nullopt;
+		Check(decoded.has_value() && decoded->Roster.size() == Engine::MaxPlayers,
+		      "Snapshot_RoundTrip_MaxPlayers_HasExactlyMaxPlayersEntries");
+	}
+
+	// Encoding a roster larger than MaxPlayers is rejected.
+	{
+		Engine::Snapshot snapshot{ 1, {} };
+		for (std::size_t i = 0; i < Engine::MaxPlayers + 1; ++i)
+		{
+			snapshot.Roster.push_back(MakeState(static_cast<Engine::PlayerId>(i + 1), 0.0f, 0.0f, 0.0f, 0.0f));
+		}
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		Check(!encoded.has_value(), "Snapshot_EncodeRosterLargerThanMaxPlayers_Rejected");
+	}
+
+	// Truncated JOIN (empty buffer) is rejected.
+	{
+		std::vector<std::uint8_t> empty;
+		Check(!Engine::DecodeJoinRequest(empty).has_value(), "DecodeJoinRequest_Empty_Rejected");
+	}
+
+	// Truncated STATE_UPDATE (shorter than the fixed wire size) is rejected.
+	{
+		std::vector<std::uint8_t> encoded = Engine::EncodeStateUpdate({ MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f), false });
+		encoded.resize(encoded.size() - 1);
+		Check(!Engine::DecodeStateUpdate(encoded).has_value(), "DecodeStateUpdate_Truncated_Rejected");
+	}
+
+	// Truncated SNAPSHOT: header declares one player, but the buffer has no player bytes.
+	{
+		Engine::Snapshot snapshot{ 1, { MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f) } };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		encoded->resize(encoded->size() - 5); // chop into the middle of the one player entry
+		Check(!Engine::DecodeSnapshot(*encoded).has_value(), "DecodeSnapshot_Truncated_Rejected");
+	}
+
+	// Unknown/wrong message type is rejected by every decoder, even at a size that
+	// would otherwise be structurally valid for that decoder.
+	{
+		std::vector<std::uint8_t> wrongType = Engine::EncodeStateUpdate({ MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f), false });
+		wrongType[0] = 0; // 0 is not a valid MessageType
+		Check(!Engine::DecodeStateUpdate(wrongType).has_value(), "DecodeStateUpdate_UnknownMessageType_Rejected");
+
+		std::vector<std::uint8_t> snapshotBytesFedToJoin =
+		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} });
+		snapshotBytesFedToJoin.resize(1); // trim to JOIN's expected size, but the type byte says SNAPSHOT
+		Check(!Engine::DecodeJoinRequest(snapshotBytesFedToJoin).has_value(),
+		      "DecodeJoinRequest_WrongMessageType_Rejected");
+	}
+
+	// Malformed roster count (exceeds MaxPlayers) is rejected even if paired with a
+	// buffer length that matches the (invalid) declared count.
+	{
+		std::vector<std::uint8_t> malformed = *Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} });
+		malformed[5] = static_cast<std::uint8_t>(Engine::MaxPlayers + 1); // roster-count byte
+		Check(!Engine::DecodeSnapshot(malformed).has_value(), "DecodeSnapshot_RosterCountExceedsMaxPlayers_Rejected");
+	}
+
+	// Extra/inconsistent trailing bytes are rejected for every message type.
+	{
+		std::vector<std::uint8_t> joinPlusExtra = Engine::EncodeJoinRequest();
+		joinPlusExtra.push_back(0xFF);
+		Check(!Engine::DecodeJoinRequest(joinPlusExtra).has_value(), "DecodeJoinRequest_ExtraTrailingByte_Rejected");
+
+		std::vector<std::uint8_t> statePlusExtra =
+		    Engine::EncodeStateUpdate({ MakeState(1, 0.0f, 0.0f, 0.0f, 0.0f), false });
+		statePlusExtra.push_back(0xFF);
+		Check(!Engine::DecodeStateUpdate(statePlusExtra).has_value(), "DecodeStateUpdate_ExtraTrailingByte_Rejected");
+
+		std::vector<std::uint8_t> snapshotPlusExtra = *Engine::EncodeSnapshot(Engine::Snapshot{ 1, {} });
+		snapshotPlusExtra.push_back(0xFF);
+		Check(!Engine::DecodeSnapshot(snapshotPlusExtra).has_value(), "DecodeSnapshot_ExtraTrailingByte_Rejected");
+	}
+
+	std::printf("\n%s\n", g_Failures == 0 ? "All tests passed." : "Some tests FAILED.");
+	return g_Failures == 0 ? 0 : 1;
+}
