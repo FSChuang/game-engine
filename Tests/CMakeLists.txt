@@ -28,3 +28,15 @@ add_test(NAME ScalingTests COMMAND ScalingTests)
 add_executable(TimelineTests TimelineTest.cpp)
 target_link_libraries(TimelineTests PRIVATE Engine)
 add_test(NAME TimelineTests COMMAND TimelineTests)
+
+# Headless smoke executables proving Engine::Socket's REQ/REP halves work end to
+# end (Milestone 2 Section 2). Manually run, not CTest-registered (see
+# NetworkSmoke/SmokeServer.cpp / SmokeClient.cpp for why). Built only when
+# EngineNetwork exists, i.e. only when cppzmq was found.
+if(TARGET EngineNetwork)
+    add_executable(NetworkSmokeServer NetworkSmoke/SmokeServer.cpp)
+    target_link_libraries(NetworkSmokeServer PRIVATE EngineNetwork)
+
+    add_executable(NetworkSmokeClient NetworkSmoke/SmokeClient.cpp)
+    target_link_libraries(NetworkSmokeClient PRIVATE EngineNetwork)
+endif()
