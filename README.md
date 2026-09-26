@@ -3,6 +3,12 @@
 [![Build and Tests](https://github.com/FSChuang/game-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/FSChuang/game-engine/actions/workflows/ci.yml)
 [![Deploy Documentation](https://github.com/FSChuang/game-engine/actions/workflows/docs.yml/badge.svg)](https://github.com/FSChuang/game-engine/actions/workflows/docs.yml)
 
+![C++17](https://img.shields.io/badge/C%2B%2B-17-4F5D3D?style=flat-square&labelColor=3B342C)
+![SDL3](https://img.shields.io/badge/SDL-3-8E5936?style=flat-square&labelColor=3B342C)
+![CMake](https://img.shields.io/badge/CMake-Build-5F6B47?style=flat-square&labelColor=3B342C)
+![Platforms](https://img.shields.io/badge/Platforms-macOS_%C2%B7_Linux-876B44?style=flat-square&labelColor=3B342C)
+[![API Reference](https://img.shields.io/badge/API_Reference-Doxygen-685F52?style=flat-square&labelColor=3B342C)](https://fschuang.github.io/game-engine/reference/application/)
+
 **[Documentation](https://fschuang.github.io/game-engine/)**
 
 A cross-platform 2D game engine built on **SDL3** in **C++17**, developed as a
