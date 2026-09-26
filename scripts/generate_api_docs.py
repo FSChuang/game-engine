@@ -58,6 +58,34 @@ def load_xml(filename):
     return ET.parse(XML_DIR / filename).getroot()
 
 
+_COMPOUND_REFIDS = None
+
+
+def compound_refid(qualified_name, kind):
+    """Resolves a compound's XML filename via index.xml's own name->refid table,
+    rather than guessing Doxygen's filename-encoding scheme directly (e.g.
+    "class_engine_1_1_timeline.xml") -- that encoding is a Doxygen-version
+    implementation detail, not a stable contract; different Doxygen versions
+    (e.g. Homebrew's bottle vs. Ubuntu's apt package, as CI caught) have used
+    different schemes for it. index.xml is Doxygen's own documented lookup
+    table and is stable across versions."""
+    global _COMPOUND_REFIDS
+    if _COMPOUND_REFIDS is None:
+        index_root = load_xml("index.xml")
+        _COMPOUND_REFIDS = {
+            (compound.findtext("name"), compound.get("kind")): compound.get("refid")
+            for compound in index_root.findall("compound")
+        }
+    refid = _COMPOUND_REFIDS.get((qualified_name, kind))
+    if refid is None:
+        sys.exit(f"generate_api_docs.py: no {kind} named {qualified_name!r} found in Doxygen's index.xml")
+    return refid
+
+
+def load_compound(qualified_name, kind):
+    return load_xml(f"{compound_refid(qualified_name, kind)}.xml")
+
+
 def text_of(elem):
     """Flatten a Doxygen description element (<briefdescription>/<detaileddescription>,
     or a <type> that may contain nested <ref> tags) into plain text. Doxygen wraps
@@ -195,7 +223,7 @@ def constructor_heading(class_name, memberdef):
 
 
 def generate_timeline_fragment():
-    root = load_xml("class_engine_1_1_timeline.xml")
+    root = load_compound("Engine::Timeline", "class")
     compound = root.find("compounddef")
     lines = []
 
@@ -216,12 +244,12 @@ def generate_timeline_fragment():
 
 
 def generate_renderer_fragment():
-    ns_root = load_xml("namespace_engine.xml")
+    ns_root = load_compound("Engine", "namespace")
     ns_compound = ns_root.find("compounddef")
     lines = []
 
     # WindowConfig struct
-    emit_struct_section(lines, load_xml("struct_engine_1_1_window_config.xml"))
+    emit_struct_section(lines, load_compound("Engine::WindowConfig", "struct"))
 
     # ScalingMode enum
     for memberdef in ns_compound.findall("./sectiondef[@kind='enum']/memberdef"):
@@ -235,7 +263,7 @@ def generate_renderer_fragment():
             emit_member_section(lines, name, memberdef)
 
     # Renderer class
-    root = load_xml("class_engine_1_1_renderer.xml")
+    root = load_compound("Engine::Renderer", "class")
     compound = root.find("compounddef")
     for memberdef in compound.findall("./sectiondef[@kind='public-func']/memberdef"):
         name = memberdef.findtext("name")
@@ -251,7 +279,7 @@ def generate_renderer_fragment():
 
 
 def generate_socket_fragment():
-    ns_root = load_xml("namespace_engine.xml")
+    ns_root = load_compound("Engine", "namespace")
     ns_compound = ns_root.find("compounddef")
     lines = []
 
@@ -261,7 +289,7 @@ def generate_socket_fragment():
             emit_enum_section(lines, "SocketRole", memberdef)
 
     # Socket class
-    root = load_xml("class_engine_1_1_socket.xml")
+    root = load_compound("Engine::Socket", "class")
     compound = root.find("compounddef")
     for memberdef in compound.findall("./sectiondef[@kind='public-func']/memberdef"):
         name = memberdef.findtext("name")
