@@ -7,6 +7,10 @@ install/
 # ---- Generated documentation site (built by mkdocs; deployed via CI, never committed) ----
 site/
 
+# ---- Generated Doxygen XML + API-fragment markdown (Documentation Phase 4;
+# see Doxyfile and scripts/generate_api_docs.py — regenerated on every docs build) ----
+.docs-build/
+
 # ---- CMake generated files ----
 CMakeCache.txt
 CMakeFiles/

@@ -11,128 +11,37 @@
 For the mental model, see [Logical Time](../concepts/logical-time.md). This
 page is deliberately just the API facts.
 
-## Synopsis
+## Constructors, at a glance
 
-```cpp
-namespace Engine
-{
-	class Timeline
-	{
-	public:
-		using AnchorSource = std::function<double()>;
+Three constructors, for three different anchor sources — exact signatures
+and briefs are in the generated API section below. One detail worth calling
+out that the header itself deliberately doesn't mention (it stays
+SDL-independent): the default constructor's real-time anchor is SDL's
+monotonic tick counter (`SDL_GetTicks()`), so it **must not be constructed
+before `SDL_Init` has run** — this is the constructor `Application` uses for
+its game timeline. The parent-anchored constructor's sampling-order
+requirement is covered in full in
+[Timeline Ownership & Sampling](../architecture/timeline-ownership-and-sampling.md).
+Every test in `Tests/TimelineTest.cpp` uses the injected-`AnchorSource`
+constructor with a hand-advanced fake clock.
 
-		Timeline();
-		explicit Timeline(AnchorSource anchorSource);
-		explicit Timeline(Timeline& parent);
+## API Reference
 
-		double GetTime() const;
-		double GetDeltaTime();
+<!-- Generated from Engine/src/Engine/Time/Timeline.h by
+     scripts/generate_api_docs.py (Documentation Phase 4 pilot) — do not
+     hand-edit the section below; edit the header's /// comments instead and
+     regenerate. -->
 
-		void Pause();
-		void Unpause();
-		bool IsPaused() const;
+--8<-- "timeline-api.md"
 
-		void SetScale(double scale);
-		double GetScale() const;
+## Behavior notes
 
-		void SetTicSize(double ticSize);
-		double GetTicSize() const;
-	};
-}
-```
-
-## Constructors
-
-`Timeline()`
-:   Anchors to real time, via a monotonic engine time source (SDL's tick
-    counter) — **must not be constructed before `SDL_Init` has run.** This is
-    the constructor `Application` uses for its game timeline.
-
-`explicit Timeline(AnchorSource anchorSource)`
-:   Anchors to an arbitrary monotonic callable. This is the seam that makes
-    `Timeline` deterministically testable without depending on real elapsed
-    time — every test in `Tests/TimelineTest.cpp` uses this constructor with
-    a hand-advanced fake clock.
-
-`explicit Timeline(Timeline& parent)`
-:   Anchors to another `Timeline`'s logical time (`parent.GetTime()`).
-    `parent` must outlive this `Timeline`. See
-    [Timeline Ownership & Sampling](../architecture/timeline-ownership-and-sampling.md)
-    for the sampling-order rule this requires.
-
-## `AnchorSource`
-
-```cpp
-using AnchorSource = std::function<double()>;
-```
-
-Supplies the current anchor time (seconds, for a real-time anchor; a parent
-`Timeline`'s local time units, for a child) — must be monotonically
-non-decreasing.
-
-## `Timeline::GetTime`
-
-```cpp
-double GetTime() const;
-```
-
-This `Timeline`'s own accumulated logical time. A **pure getter** — it never
-samples the anchor and never changes state, so calling it repeatedly always
-returns the same value until something else advances the timeline.
-
-## `Timeline::GetDeltaTime`
-
-```cpp
-double GetDeltaTime();
-```
-
-Samples the anchor and delivers all logical time elapsed since the last call
-to `Timeline::GetDeltaTime` — including any interval already flushed by an
-intervening `SetScale`/`SetTicSize`/`Pause` call, so no elapsed time is ever
-silently lost. Returns `0` while paused. Call once per update, per timeline.
-
-## `Timeline::Pause` / `Unpause` / `IsPaused`
-
-```cpp
-void Pause();
-void Unpause();
-bool IsPaused() const;
-```
-
-`Timeline::Pause` freezes logical time: subsequent `GetDeltaTime()` calls
-return `0` regardless of how much anchor time passes, until `Unpause()`.
-Anchor time that passes while paused is **discarded, not deferred** — there
-is no catch-up jump on unpause. Any interval elapsed but not yet sampled at
-the moment `Pause()` is called is flushed first (see `SetScale` below) and
-still delivered by the next `GetDeltaTime()` call.
-
-## `SetScale` / `GetScale`
-
-```cpp
-void SetScale(double scale);
-double GetScale() const;
-```
-
-`Timeline::SetScale` changes how fast logical time advances relative to the
-anchor (`1.0` = one-to-one, `0.5` = half speed, `2.0` = double speed).
-**Throws `std::invalid_argument` if `scale <= 0`**, leaving the previous
-value in place. Anchor time already elapsed before the call is credited at
-the *old* scale first; only anchor time sampled after this call uses the new
-one — see [Logical Time](../concepts/logical-time.md#why-a-rate-change-never-rewrites-history)
-for the exact mechanism and a worked example.
-
-## `SetTicSize` / `GetTicSize`
-
-```cpp
-void SetTicSize(double ticSize);
-double GetTicSize() const;
-```
-
-The anchor-time duration one local logical-time unit represents — a unit
-conversion, not a speed multiplier (see
-[Logical Time](../concepts/logical-time.md#the-pipeline)). **Throws
-`std::invalid_argument` if `ticSize <= 0`**, leaving the previous value in
-place. Follows the same never-retroactive rule as `SetScale`.
+`SetScale`/`SetTicSize` never retroactively reinterpret already-elapsed
+time — anchor time credited before a rate change keeps its old rate. See
+[Logical Time](../concepts/logical-time.md#why-a-rate-change-never-rewrites-history)
+for the exact mechanism and a worked example, and
+[the pipeline](../concepts/logical-time.md#the-pipeline) for how scale and
+tic size compose.
 
 ## Thread safety
 

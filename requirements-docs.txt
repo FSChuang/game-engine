@@ -3,3 +3,9 @@
 # transitive dependencies — that covers every extension mkdocs.yml uses
 # (admonition, attr_list, md_in_html, tables, pymdownx.*, toc).
 mkdocs-material
+
+# scripts/generate_api_docs.py (Documentation Phase 4: Doxygen API-extraction
+# pilot) needs the `doxygen` binary on PATH — a system package, not installable
+# via pip (macOS: `brew install doxygen`; CI: `apt-get install doxygen`, see
+# .github/workflows/docs.yml). The script itself has no pip dependency beyond
+# the Python standard library (xml.etree.ElementTree).

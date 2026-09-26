@@ -11,143 +11,39 @@
 For the mental model, see [System: Socket](../systems/networking/socket.md).
 This page is deliberately just the API facts.
 
-## Synopsis
+!!! danger "Thread affinity — read this before using Socket"
+    **One `Socket` instance belongs to exactly one thread, for its entire
+    lifetime.** It spawns no threads and has no internal synchronization —
+    never construct, call a method on, or destroy the same `Socket` from
+    more than one thread. This matches cppzmq's own contract (a
+    `zmq::context_t` may be shared across threads; a `zmq::socket_t` may
+    not). See
+    [Architecture: Networking Threading Model](../architecture/networking-threading-model.md)
+    for the full reasoning and a concrete consumer pattern — this is not
+    something the generated API section below can convey on its own.
 
-```cpp
-namespace Engine
-{
-	enum class SocketRole
-	{
-		Request,
-		Reply,
-		Publish,
-		Subscribe
-	};
+## API Reference
 
-	class Socket
-	{
-	public:
-		explicit Socket(SocketRole role);
+<!-- Generated from Engine/src/Engine/Network/Socket.h by
+     scripts/generate_api_docs.py (Documentation Phase 4 pilot) — do not
+     hand-edit the section below; edit the header's /// comments instead and
+     regenerate. -->
 
-		Socket(const Socket&) = delete;
-		Socket& operator=(const Socket&) = delete;
+--8<-- "socket-api.md"
 
-		void Bind(const std::string& endpoint);
-		void Connect(const std::string& endpoint);
-		void Disconnect(const std::string& endpoint);
-		void Subscribe(const std::string& topic);
+## Behavior notes
 
-		void Send(const std::string& message);
-		std::string Receive();
-		std::optional<std::string> TryReceive();
-	};
-}
-```
-
-## Socket
-
-```cpp
-explicit Socket(SocketRole role);
-```
-
-Constructs a ZeroMQ context and a socket of the type matching `role`
-together. Neither copyable nor movable.
-
-## SocketRole
-
-```cpp
-enum class SocketRole
-{
-	Request,    // ZMQ_REQ
-	Reply,      // ZMQ_REP
-	Publish,    // ZMQ_PUB
-	Subscribe   // ZMQ_SUB
-};
-```
-
-Fixed at construction — there is no way to change a `Socket`'s role
-afterward.
-
-## Socket::Bind
-
-```cpp
-void Bind(const std::string& endpoint);
-```
-
-Valid for `Reply`/`Publish` only (checked via `ENGINE_ASSERT`, which
-compiles out in release builds — see
-[System: Socket](../systems/networking/socket.md#thread-affinity-the-most-important-fact-about-this-class)
-for what that means in practice). Starts listening at `endpoint`, e.g.
-`"tcp://127.0.0.1:5555"` for one interface or `"tcp://*:5555"` for all.
-
-## Socket::Connect
-
-```cpp
-void Connect(const std::string& endpoint);
-```
-
-Valid for `Request`/`Subscribe` only. Connects to a peer already bound at
-`endpoint`. A `Subscribe` socket may call this repeatedly to connect to
-**multiple** publishers over its lifetime — `Request` has no documented
-"connect once" restriction enforced in code, but every real use in this
-project connects a `Request` socket exactly once.
-
-## Socket::Disconnect
-
-```cpp
-void Disconnect(const std::string& endpoint);
-```
-
-Severs one specific connection previously made via `Connect(endpoint)`,
-leaving any other connections on this same socket untouched. Valid for any
-role that has called `Connect` — most meaningfully `Subscribe`.
-
-## Socket::Subscribe
-
-```cpp
-void Subscribe(const std::string& topic);
-```
-
-Valid for `Subscribe` role only. Registers interest in messages whose
-payload starts with `topic`. An empty string subscribes to everything a
-connected publisher sends. A freshly-constructed `Subscribe` socket
-receives **nothing** until this is called at least once.
-
-## Socket::Send
-
-```cpp
-void Send(const std::string& message);
-```
-
-Sends `message` as a single ZeroMQ frame. Valid for `Request`/`Reply` (as
-part of their alternating discipline) and `Publish` (fire-and-forget
-broadcast to every currently-connected subscriber).
-
-## Socket::Receive
-
-```cpp
-std::string Receive();
-```
-
-**Blocks the calling thread until exactly one frame arrives** — there is no
-timeout of any kind. If no peer ever sends, this call never returns. Throws
-`std::runtime_error` in the (not ordinarily expected) case where the
-underlying blocking `recv` call itself reports failure; genuine ZeroMQ
-failures from the operation throw `zmq::error_t`, same as every other
-method here.
-
-## Socket::TryReceive
-
-```cpp
-std::optional<std::string> TryReceive();
-```
-
-Performs **exactly one non-blocking receive attempt** (`ZMQ_DONTWAIT`) —
-never blocks, never internally retries or spins. Returns the message if one
-was already fully available; returns `std::nullopt` if none was available
-at the moment of the call — this is the expected, non-error outcome, not a
-failure. A genuine ZeroMQ error still throws `zmq::error_t`, exactly like
-every other method on this class.
+- **`Bind`/`Connect` role rules are `ENGINE_ASSERT`-checked, which compiles
+  out entirely in release builds** — see
+  [System: Socket](../systems/networking/socket.md#thread-affinity-the-most-important-fact-about-this-class)
+  for what that means in practice: the role restriction is a documented
+  contract, not a guarantee enforced in every build.
+- **`Connect`'s "connect once" behavior for `Request` is a convention, not
+  an enforced rule** — nothing in code stops repeated calls, but every real
+  use in this project connects a `Request` socket exactly once.
+- **`Disconnect`** is valid for any role that has called `Connect` — most
+  meaningfully `Subscribe`, which is the only role that routinely connects
+  to more than one endpoint.
 
 ## See Also
 

@@ -10,8 +10,9 @@
 namespace Engine
 {
 	// Owns the SDL application lifecycle and the main game loop.
-	// The one deliberate engine singleton-like object (ENGINEERING_SPEC.md §9): a game
-	// creates exactly one and calls Run() on it.
+	// The one deliberate engine singleton-like object (ENGINEERING_SPEC.md §9): a game is
+	// expected to create exactly one and call Run() on it. This is a documented intent, not
+	// an enforced invariant — nothing here guards against constructing a second instance.
 	class Application
 	{
 	public:

@@ -27,8 +27,14 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen
+
       - name: Install documentation dependencies
         run: pip install -r requirements-docs.txt
+
+      - name: Generate API docs (Doxygen + fragment generator)
+        run: python3 scripts/generate_api_docs.py
 
       - name: Build documentation
         run: mkdocs build --strict

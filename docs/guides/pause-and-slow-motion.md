@@ -81,8 +81,8 @@ scale change avoids retroactively altering time that already elapsed.
 
 ## Related APIs
 
-- [`Timeline::Pause` / `Unpause` / `IsPaused`](../reference/timeline.md#timelinepause-unpause-ispaused)
-- [`Timeline::SetScale` / `GetScale`](../reference/timeline.md#setscale-getscale)
+- [`Timeline::Pause` / `Unpause` / `IsPaused`](../reference/timeline.md#timelinepause)
+- [`Timeline::SetScale` / `GetScale`](../reference/timeline.md#timelinesetscale)
 - [`Application::GetGameTimeline`](../reference/application.md#applicationgetgametimeline)
 
 ## Next steps

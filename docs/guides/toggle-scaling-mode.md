@@ -68,7 +68,7 @@ math each mode applies.
 
 ## Related APIs
 
-- [`Renderer::SetScalingMode` / `GetScalingMode` / `ToggleScalingMode`](../reference/renderer.md#renderersetscalingmode-getscalingmode-togglescalingmode)
+- [`Renderer::SetScalingMode` / `GetScalingMode` / `ToggleScalingMode`](../reference/renderer.md#renderersetscalingmode)
 - [`ApplyScalingMode`](../reference/renderer.md#applyscalingmode)
 
 ## Next steps

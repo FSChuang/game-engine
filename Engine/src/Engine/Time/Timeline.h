@@ -39,44 +39,51 @@ namespace Engine
 	class Timeline
 	{
 	public:
-		// Supplies the current anchor time (seconds for a real-time anchor, or a parent
-		// Timeline's local time units for a child); must be monotonically non-decreasing.
+		/// Supplies the current anchor time (seconds for a real-time anchor, or a parent
+		/// Timeline's local time units for a child); must be monotonically non-decreasing.
 		using AnchorSource = std::function<double()>;
 
-		// Anchors to real time, via a monotonic engine time source (not wall-clock/calendar time).
+		/// Anchors to real time, via a monotonic engine time source (not wall-clock/calendar time).
 		Timeline();
 
-		// Anchors to an arbitrary monotonic time source. This is the seam that makes Timeline
-		// logic deterministically testable without depending on real elapsed time.
+		/// Anchors to an arbitrary monotonic time source. This is the seam that makes Timeline
+		/// logic deterministically testable without depending on real elapsed time.
 		explicit Timeline(AnchorSource anchorSource);
 
-		// Anchors to another Timeline's logical time. `parent` must outlive this Timeline.
+		/// Anchors to another Timeline's logical time. `parent` must outlive this Timeline.
 		explicit Timeline(Timeline& parent);
 
-		// This Timeline's own accumulated logical time, in local time units. A pure getter: it
-		// never samples the anchor or changes state.
+		/// This Timeline's own accumulated logical time, in local time units. A pure getter: it
+		/// never samples the anchor or changes state.
 		double GetTime() const;
 
-		// Delivers all logical time elapsed since the last call to GetDeltaTime(): this includes
-		// any interval already flushed by an intervening SetScale()/SetTicSize()/Pause() call (at
-		// whichever rate was in effect while each interval elapsed), so no elapsed time is ever
-		// silently lost. Zero while paused. Call once per update per Timeline.
+		/// Delivers all logical time elapsed since the last call to GetDeltaTime(): this includes
+		/// any interval already flushed by an intervening SetScale()/SetTicSize()/Pause() call (at
+		/// whichever rate was in effect while each interval elapsed), so no elapsed time is ever
+		/// silently lost. Zero while paused. Call once per update per Timeline.
 		double GetDeltaTime();
 
+		/// Freezes logical time: subsequent GetDeltaTime() calls report zero elapsed time until
+		/// Unpause() is called.
 		void Pause();
+		/// Resumes logical time from where it left off. Time that passed on the anchor while
+		/// paused is discarded, not deferred — there is no catch-up jump.
 		void Unpause();
+		/// True while this Timeline is currently paused.
 		bool IsPaused() const;
 
-		// Throws std::invalid_argument if scale <= 0; the previous value is retained and no
-		// state changes. Otherwise, first credits anchor time elapsed so far at the current
-		// (old) scale, then applies the new scale to anchor time sampled after this call.
+		/// Throws std::invalid_argument if scale <= 0; the previous value is retained and no
+		/// state changes. Otherwise, first credits anchor time elapsed so far at the current
+		/// (old) scale, then applies the new scale to anchor time sampled after this call.
 		void SetScale(double scale);
+		/// The current scale (default 1.0).
 		double GetScale() const;
 
-		// Throws std::invalid_argument if ticSize <= 0; the previous value is retained and no
-		// state changes. Otherwise, first credits anchor time elapsed so far at the current
-		// (old) tic size, then applies the new tic size to anchor time sampled after this call.
+		/// Throws std::invalid_argument if ticSize <= 0; the previous value is retained and no
+		/// state changes. Otherwise, first credits anchor time elapsed so far at the current
+		/// (old) tic size, then applies the new tic size to anchor time sampled after this call.
 		void SetTicSize(double ticSize);
+		/// The current tic size (default 1.0).
 		double GetTicSize() const;
 
 	private:
