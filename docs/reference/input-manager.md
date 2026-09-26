@@ -11,67 +11,30 @@
 For the mental model, see [Input State](../concepts/input-state.md). This
 page is deliberately just the API facts.
 
-## Synopsis
+## API Reference
 
-```cpp
-namespace Engine
-{
-	class InputManager
-	{
-	public:
-		void Update();
-		bool IsKeyPressed(SDL_Scancode key) const;
-		bool IsKeyJustPressed(SDL_Scancode key) const;
-	};
-}
-```
+<!-- Generated from Engine/src/Engine/Input/InputManager.h by
+     scripts/generate_api_docs.py — do not hand-edit the section below; edit
+     the header's /// comments instead and regenerate. -->
+
+--8<-- "input-manager-api.md"
+
+## Behavior notes
 
 No constructor is declared — `InputManager` uses its implicit default
 constructor, which only zero-initializes its internal snapshot array.
-
-## SDL_Scancode
 
 Every method takes an `SDL_Scancode` — SDL's *physical key position* type
 (e.g. `SDL_SCANCODE_W` is always the key in the "W" position on a QWERTY
 layout, regardless of the user's actual keyboard layout), not a
 layout-dependent keycode or a text character.
 
-## InputManager::Update
-
-```cpp
-void Update();
-```
-
-Copies SDL's current keyboard state into the previous-state snapshot that
-`IsKeyJustPressed` compares against. Must be called exactly once per frame.
-`Application` calls it **last** in the frame — see
-[Input State](../concepts/input-state.md) for why that ordering matters.
-
-## InputManager::IsKeyPressed
-
-```cpp
-bool IsKeyPressed(SDL_Scancode key) const;
-```
-
-True while `key` is currently held down. Queries SDL's **live** keyboard
-state on every call (`SDL_GetKeyboardState`) — never a cached value.
-
-## InputManager::IsKeyJustPressed
-
-```cpp
-bool IsKeyJustPressed(SDL_Scancode key) const;
-```
-
-True only on the frame `key` transitions from not-pressed to pressed:
-`IsKeyPressed(key) && !` (key was down in the last `Update()` snapshot).
-False while the key continues to be held, and false again once it's
-released.
-
-## Per-frame semantics
-
-"Current" (`IsKeyPressed`) is always live. "Previous" is whatever `Update()`
-last recorded. See [Input State](../concepts/input-state.md) for a worked
-frame-by-frame table of held vs. just-pressed.
+"Current" (`IsKeyPressed`) is always live — it queries SDL directly
+(`SDL_GetKeyboardState`) on every call, never a cached value. "Previous" is
+whatever `Update()` last recorded, and `Application` calls `Update()`
+**last** in the frame — see
+[Input State](../concepts/input-state.md) for a worked frame-by-frame table
+and why that ordering matters.
 
 ## Example
 

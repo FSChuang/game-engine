@@ -26,6 +26,8 @@ namespace Engine
 	// Every branch returns exactly one reply frame, so a REP socket calling this once
 	// per received request always has exactly one matching send — the REQ/REP
 	// alternation is never left unsatisfied.
+	/// Bootstrap-listener dispatch: JOIN assigns a new player; STATE_UPDATE
+	/// updates/removes an existing one. Always returns exactly one reply frame.
 	std::vector<std::uint8_t> HandleRequest(PlayerRegistry& registry, const std::vector<std::uint8_t>& requestBytes);
 
 	// Applies one already-received request frame from a DEDICATED per-client session
@@ -50,6 +52,9 @@ namespace Engine
 	//
 	// Pure logic — no sockets — so this is unit-testable exactly like HandleRequest.
 	// Every branch returns exactly one reply frame.
+	/// Dedicated-session dispatch for one already-assigned `expectedPlayerId`: never
+	/// accepts JOIN, and rejects a STATE_UPDATE claiming a different PlayerId without
+	/// touching the registry. Always returns exactly one reply frame.
 	std::vector<std::uint8_t> HandleSessionRequest(PlayerRegistry& registry, PlayerId expectedPlayerId,
 	                                                const std::vector<std::uint8_t>& requestBytes);
 }

@@ -12,14 +12,13 @@ PROJECT_NAME           = "Game Engine"
 PROJECT_BRIEF          = "C++17 / SDL3 engine — generated API facts"
 
 # --- Input scope ---
-# Pilot phase (Documentation Phase 4): only the three headers being piloted.
-# Widen this to "Engine/src/Engine" (recursive) once more headers are migrated
-# to /// comments in a future phase — nothing else about this file needs to
-# change to scale up.
-INPUT                  = Engine/src/Engine/Time/Timeline.h \
-                          Engine/src/Engine/Renderer/Renderer.h \
-                          Engine/src/Engine/Network/Socket.h
-RECURSIVE              = NO
+# Documentation Phase 5: widened from the Phase 4 pilot's three headers to the
+# complete public Engine API header tree. Inspected first (find Engine/src/Engine
+# -name "*.h") -- all 12 headers found there are genuinely public engine API,
+# nothing internal-only, so the whole tree is safe to include as-is. FILE_PATTERNS
+# restricts this to headers only; .cpp implementation files are never parsed.
+INPUT                  = Engine/src/Engine
+RECURSIVE              = YES
 FILE_PATTERNS          = *.h
 
 # --- Extraction ---
@@ -39,16 +38,19 @@ XML_OUTPUT             = doxygen-xml
 XML_PROGRAMLISTING     = NO
 
 # --- Warnings ---
-# WARN_IF_UNDOCUMENTED is off pre-emptively, not because it's currently noisy:
-# with INPUT scoped to just the pilot's three headers (all fully documented),
-# it produces zero warnings today (verified). It's off because the INPUT
-# comment above describes widening to the whole Engine/src/Engine tree in a
-# future phase, at which point enabling this would flood output with warnings
-# for every not-yet-migrated header — noise, not signal, until those headers
-# get their own /// pass. Re-enable once that widening happens and the rest of
-# the engine has been migrated.
+# WARN_IF_UNDOCUMENTED: re-enabled in Documentation Phase 5, now that INPUT
+# covers the complete public Engine API header tree (widened above) and every
+# header in it has a /// pass. Verified empirically before flipping this on:
+# ran a diagnostic build of the full widened INPUT with this setting enabled
+# and got zero warnings -- EXTRACT_ALL=YES means a documented class/enum/struct
+# whose individual trivial members (e.g. a plain getter) have no /// comment of
+# their own doesn't trigger this warning, so there's no meaningless noise from
+# "every trivial data member needs an essay" -- only genuine gaps would surface.
+# WARN_NO_PARAMDOC stays off: most comments here are plain prose, not per-@param
+# tagged, and that's a deliberate style choice (see scripts/generate_api_docs.py's
+# @param-bullet handling), not a documentation gap worth warning about.
 WARNINGS               = YES
-WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_UNDOCUMENTED   = YES
 WARN_IF_DOC_ERROR      = YES
 WARN_NO_PARAMDOC       = NO
 WARN_AS_ERROR          = NO

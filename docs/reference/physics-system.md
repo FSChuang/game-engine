@@ -11,50 +11,18 @@
 For the mental model, see [System: Physics](../systems/physics.md). This
 page is deliberately just the API facts.
 
-## Synopsis
+## API Reference
 
-```cpp
-namespace Engine
-{
-	class PhysicsSystem
-	{
-	public:
-		explicit PhysicsSystem(float gravity);
+<!-- Generated from Engine/src/Engine/Physics/PhysicsSystem.h by
+     scripts/generate_api_docs.py — do not hand-edit the section below; edit
+     the header's /// comments instead and regenerate. -->
 
-		void SetGravity(float gravity);
-		float GetGravity() const;
+--8<-- "physics-system-api.md"
 
-		void Update(Entity& entity, float deltaTime) const;
-	};
-}
-```
+## Behavior notes
 
-## PhysicsSystem
-
-```cpp
-explicit PhysicsSystem(float gravity);
-```
-
-Constructs a physics system configured with the given gravity value. There
-is no default constructor — a gravity value is always required.
-
-## PhysicsSystem::SetGravity / GetGravity
-
-```cpp
-void SetGravity(float gravity);
-float GetGravity() const;
-```
-
-Plain storage — no validation, no clamping. Any `float` is accepted,
-including zero or negative (upward) gravity.
-
-## PhysicsSystem::Update
-
-```cpp
-void Update(Entity& entity, float deltaTime) const;
-```
-
-Applies one semi-implicit Euler integration step, in this exact order:
+`Update` applies one semi-implicit Euler integration step, in this exact
+order:
 
 ```
 velocity.Y += gravity * deltaTime
@@ -64,13 +32,14 @@ entity.Move({ velocity.X * deltaTime, velocity.Y * deltaTime })
 
 Position is integrated using the **already-updated** velocity — not the
 velocity `entity` had before this call. `deltaTime` is in the same units as
-`Timeline::GetDeltaTime()` (seconds); `Update` performs no unit conversion
-of its own. A `deltaTime` of `0` produces no change to either velocity or
-position.
+`Timeline::GetDeltaTime()` (seconds); `Update` performs no unit conversion of
+its own. A `deltaTime` of `0` produces no change to either velocity or
+position. `entity` is mutated directly through its own `SetVelocity`/`Move`
+— `Update` holds no state about `entity` between calls.
 
-`entity` is mutated directly through its own `SetVelocity`/`Move` — `Update`
-holds no state about `entity` between calls; every call reads whatever
-velocity `entity` currently reports and computes from that.
+`SetGravity`/`GetGravity` are plain storage — no validation, no clamping.
+Any `float` is accepted, including zero or negative (upward) gravity. There
+is no default constructor — a gravity value is always required.
 
 ## Example
 

@@ -12,70 +12,15 @@ For the mental model, see
 [System: Server Dispatch](../systems/networking/server-dispatch.md). This
 page is deliberately just the API facts.
 
-## PlayerRegistry
+## PlayerRegistry API
 
-```cpp
-class PlayerRegistry
-{
-public:
-	PlayerRegistry() = default;
+<!-- Generated from Engine/src/Engine/Network/PlayerRegistry.h by
+     scripts/generate_api_docs.py — do not hand-edit the section below; edit
+     the header's /// comments instead and regenerate. -->
 
-	std::optional<PlayerId> AssignPlayer();
-	bool UpdatePlayer(const PlayerState& state);
-	bool RemovePlayer(PlayerId playerId);
-	std::vector<PlayerState> Snapshot() const;
-	std::size_t PlayerCount() const;
-};
-```
+--8<-- "player-registry-api.md"
 
-No custom constructor — `PlayerRegistry()` default-constructs to an empty
-registry.
-
-### PlayerRegistry::AssignPlayer
-
-```cpp
-std::optional<PlayerId> AssignPlayer();
-```
-
-Assigns a new player a unique ID and a default, all-zero initial
-`PlayerState`. IDs are handed out starting at 1 and **increment
-monotonically — never reused**, even after the player holding one is
-removed later. Returns `std::nullopt` once `MaxPlayers` players are already
-active; nothing is mutated in that case.
-
-### PlayerRegistry::UpdatePlayer
-
-```cpp
-bool UpdatePlayer(const PlayerState& state);
-```
-
-Overwrites the stored state for `state.Id`. Returns `false` — a no-op, not
-an error and not an insertion — if `state.Id` is not a currently active
-player.
-
-### PlayerRegistry::RemovePlayer
-
-```cpp
-bool RemovePlayer(PlayerId playerId);
-```
-
-Removes a currently active player. Returns `false` if `playerId` was not
-active — calling this on an already-absent or never-assigned ID is a safe,
-idempotent no-op.
-
-### PlayerRegistry::Snapshot / PlayerCount
-
-```cpp
-std::vector<PlayerState> Snapshot() const;
-std::size_t PlayerCount() const;
-```
-
-`Snapshot()` returns every currently active player's latest state, in
-**unspecified order** — never assume index `i` corresponds to any
-particular player or to insertion order. `PlayerCount()` is the number of
-currently active players.
-
-### Thread safety
+### PlayerRegistry thread safety
 
 No mutex, no atomics — **not internally thread-safe**. If more than one
 thread (e.g. multiple session threads in a server) shares one
@@ -84,16 +29,15 @@ access. See [Example: Spare Parts](../examples/spare-parts.md) for one
 project's own external-mutex approach — that mutex is that project's code,
 not a feature of `PlayerRegistry` itself.
 
-## ServerDispatch
+## ServerDispatch API
 
-```cpp
-std::vector<std::uint8_t> HandleRequest(PlayerRegistry& registry, const std::vector<std::uint8_t>& requestBytes);
+<!-- Generated from Engine/src/Engine/Network/ServerDispatch.h by
+     scripts/generate_api_docs.py — do not hand-edit the section below; edit
+     the header's /// comments instead and regenerate. -->
 
-std::vector<std::uint8_t> HandleSessionRequest(PlayerRegistry& registry, PlayerId expectedPlayerId,
-                                                const std::vector<std::uint8_t>& requestBytes);
-```
+--8<-- "server-dispatch-api.md"
 
-### HandleRequest
+### HandleRequest, in detail
 
 The bootstrap-listener dispatch — accepts new players.
 
@@ -108,7 +52,7 @@ Every `Snapshot` this function builds carries a **neutral, all-zero
 `PlatformState`** and an **empty `Peers` list** — this function has no
 concept of real-time simulation or peer discovery.
 
-### HandleSessionRequest
+### HandleSessionRequest, in detail
 
 For a dedicated per-client session that already represents exactly one
 assigned `expectedPlayerId`. Never accepts `JOIN`.

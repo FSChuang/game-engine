@@ -63,7 +63,7 @@ formula and order.
 ## Related APIs
 
 - [`PhysicsSystem::Update`](../reference/physics-system.md#physicssystemupdate)
-- [`PhysicsSystem::SetGravity` / `GetGravity`](../reference/physics-system.md#physicssystemsetgravity-getgravity)
+- [`PhysicsSystem::SetGravity` / `GetGravity`](../reference/physics-system.md#physicssystemsetgravity)
 
 ## Next steps
 

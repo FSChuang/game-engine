@@ -6,7 +6,7 @@
 
 namespace Engine
 {
-	// A flat RGBA color used to render an Entity as a filled rectangle.
+	/// A flat RGBA color used to render an Entity as a filled rectangle.
 	struct Color
 	{
 		uint8_t R;
@@ -15,20 +15,25 @@ namespace Engine
 		uint8_t A;
 	};
 
-	// A generic 2D game object: a position, a size, and the color used to draw it as a filled
-	// rectangle. Deliberately knows nothing about what kind of object it represents (player,
-	// enemy, wall, ...) so game-specific types can be layered on top later without this type
-	// changing (ENGINEERING_SPEC.md §5 entity model note).
+	/// A generic 2D game object: a position, a size, and the color used to draw it as a filled
+	/// rectangle. Deliberately knows nothing about what kind of object it represents (player,
+	/// enemy, wall, ...) so game-specific types can be layered on top later without this type
+	/// changing (ENGINEERING_SPEC.md §5 entity model note).
 	class Entity
 	{
 	public:
+		/// Velocity starts at {0, 0} regardless of these arguments.
 		Entity(Vector2 position, Vector2 size, Color color);
 
 		Vector2 GetPosition() const;
+		/// Replaces the position outright.
 		void SetPosition(Vector2 position);
+		/// Adds delta to the current position; does not touch velocity.
 		void Move(Vector2 delta);
 
+		/// Fixed at construction — there is no setter.
 		Vector2 GetSize() const;
+		/// Fixed at construction — there is no setter.
 		Color GetColor() const;
 
 		Vector2 GetVelocity() const;

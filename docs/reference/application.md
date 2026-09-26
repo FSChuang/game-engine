@@ -13,74 +13,34 @@ For the mental model and lifecycle rationale, see the
 [Application Lifecycle architecture](../architecture/application-lifecycle.md)
 page — this page is deliberately just the API facts.
 
-## Synopsis
+## API Reference
 
-```cpp
-namespace Engine
-{
-	class Application
-	{
-	public:
-		using UpdateCallback = std::function<void(InputManager& input, float deltaTime)>;
-		using RenderCallback = std::function<void(Renderer& renderer)>;
+<!-- Generated from Engine/src/Engine/Core/Application.h by
+     scripts/generate_api_docs.py — do not hand-edit the section below; edit
+     the header's /// comments instead and regenerate. -->
 
-		explicit Application(const WindowConfig& windowConfig);
-		~Application();
+--8<-- "application-api.md"
 
-		Application(const Application&) = delete;
-		Application& operator=(const Application&) = delete;
+## Behavior notes
 
-		void Run(const UpdateCallback& onUpdate, const RenderCallback& onRender);
+The constructor calls `SDL_Init(SDL_INIT_VIDEO)` first — throws
+`std::runtime_error` if that fails, and cleanly calls `SDL_Quit()` before
+rethrowing if anything afterward (`Renderer` or `Timeline` construction)
+throws. Neither copyable nor movable.
 
-		Timeline& GetGameTimeline();
-	};
-}
-```
-
-## `Application(const WindowConfig&)`
-
-Constructs the window/renderer, input manager, and game timeline. Calls
-`SDL_Init(SDL_INIT_VIDEO)` first — throws `std::runtime_error` if that fails,
-and cleanly calls `SDL_Quit()` before rethrowing if anything afterward
-(`Renderer` or `Timeline` construction) throws.
-
-Neither copyable nor movable.
-
-## `Application::Run`
-
-```cpp
-void Run(const UpdateCallback& onUpdate, const RenderCallback& onRender);
-```
-
-The main loop. **Blocks the calling thread** until the window closes or quit
-is requested. Calls `onUpdate` then `onRender` once per frame, in that order,
-with a `Timeline`-derived `deltaTime` sampled fresh each frame — see the
+`Run` **blocks the calling thread** until the window closes or quit is
+requested. Calls `onUpdate` then `onRender` once per frame, in that order,
+with a `Timeline`-derived `deltaTime` sampled fresh each frame, uncapped and
+variable (not fixed-step) — see the
 [Application Loop concept](../concepts/application-loop.md#the-actual-order-exactly)
 for the exact per-frame order this fits into.
 
-`deltaTime` is variable, not fixed-step — whatever real time elapsed since
-the last frame, subject to the game timeline's current scale/pause.
+`GetGameTimeline` returns the same `Timeline` instance for the life of the
+`Application` — use it to read or change scale/pause from your own code; see
+the [Pause & Slow Motion guide](../guides/pause-and-slow-motion.md).
 
-## `Application::GetGameTimeline`
-
-```cpp
-Timeline& GetGameTimeline();
-```
-
-Returns a reference to the one `Timeline` instance `Run()` samples every
-frame — the same instance for the life of the `Application`. Use this to
-read or change scale/pause from your own code; see the
-[Pause & Slow Motion guide](../guides/pause-and-slow-motion.md).
-
-## Callback types
-
-```cpp
-using UpdateCallback = std::function<void(InputManager& input, float deltaTime)>;
-using RenderCallback = std::function<void(Renderer& renderer)>;
-```
-
-Plain `std::function` aliases — any callable with a matching signature
-works, not just lambdas.
+`UpdateCallback`/`RenderCallback` are plain `std::function` aliases — any
+callable with a matching signature works, not just lambdas.
 
 ## Ownership and resource notes
 

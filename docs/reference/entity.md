@@ -11,93 +11,24 @@
 For the mental model, see [Entity Model](../concepts/entity-model.md). This
 page is deliberately just the API facts.
 
-## Synopsis
+## API Reference
 
-```cpp
-namespace Engine
-{
-	struct Color
-	{
-		uint8_t R;
-		uint8_t G;
-		uint8_t B;
-		uint8_t A;
-	};
+<!-- Generated from Engine/src/Engine/Entity/Entity.h by
+     scripts/generate_api_docs.py — do not hand-edit the section below; edit
+     the header's /// comments instead and regenerate. -->
 
-	class Entity
-	{
-	public:
-		Entity(Vector2 position, Vector2 size, Color color);
+--8<-- "entity-api.md"
 
-		Vector2 GetPosition() const;
-		void SetPosition(Vector2 position);
-		void Move(Vector2 delta);
+## Behavior notes
 
-		Vector2 GetSize() const;
-		Color GetColor() const;
-
-		Vector2 GetVelocity() const;
-		void SetVelocity(Vector2 velocity);
-	};
-}
-```
-
-## Color
-
-```cpp
-struct Color
-{
-	uint8_t R;
-	uint8_t G;
-	uint8_t B;
-	uint8_t A;
-};
-```
-
-A flat RGBA color, one byte per channel. Set once at construction via
-`Entity`'s constructor — there is no setter.
-
-## Entity
-
-```cpp
-Entity(Vector2 position, Vector2 size, Color color);
-```
-
-Constructs an entity with the given position, size, and color. Velocity
-starts at `{0, 0}` regardless of the constructor arguments — there is no way
-to set an initial velocity except by calling `SetVelocity` afterward.
-
-## Entity::GetPosition / SetPosition / Move
-
-```cpp
-Vector2 GetPosition() const;
-void SetPosition(Vector2 position);
-void Move(Vector2 delta);
-```
-
-`SetPosition` replaces the position outright. `Move` adds `delta` to the
-current position (`position.X += delta.X`, and the same for `Y`) — it does
-not touch velocity.
-
-## Entity::GetSize / GetColor
-
-```cpp
-Vector2 GetSize() const;
-Color GetColor() const;
-```
-
-Read-only. Both are fixed at construction — there is no `SetSize` or
-`SetColor`.
-
-## Entity::GetVelocity / SetVelocity
-
-```cpp
-Vector2 GetVelocity() const;
-void SetVelocity(Vector2 velocity);
-```
-
-Plain storage — `Entity` never reads or changes its own velocity. Only
-external code (typically `PhysicsSystem::Update`) does.
+- **`Color`** is set once at construction via `Entity`'s constructor — there
+  is no setter.
+- **`Entity`'s constructor** never sets an initial velocity — velocity starts
+  at `{0, 0}` regardless of the constructor arguments; the only way to set
+  one is calling `SetVelocity` afterward.
+- **`GetVelocity`/`SetVelocity`** are plain storage — `Entity` never reads or
+  changes its own velocity. Only external code (typically
+  `PhysicsSystem::Update`) does.
 
 ## Copy / move / value semantics
 

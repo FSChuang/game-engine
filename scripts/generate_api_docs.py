@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Documentation Phase 4 pilot: turn Doxygen's XML output into small Markdown
-fragments, embedded into hand-written docs/reference/*.md pages via
-pymdownx.snippets ("--8<--" includes, already enabled in mkdocs.yml).
+"""Turn Doxygen's XML output into small Markdown fragments, embedded into
+hand-written docs/reference/*.md pages via pymdownx.snippets ("--8<--"
+includes, already enabled in mkdocs.yml).
+
+Started as a 3-class pilot (Documentation Phase 4: Timeline, Renderer,
+Socket); Documentation Phase 5 widened Doxyfile's INPUT to the complete
+public Engine API header tree and extended this script to cover the
+remaining public surface: Application, Entity, PhysicsSystem, InputManager,
+Collision, Protocol, PlayerRegistry, ServerDispatch.
 
 Pipeline this script performs, end to end:
   1. Run `doxygen Doxyfile` (repo root) -> .docs-build/doxygen-xml/*.xml
-  2. Parse the XML for exactly the three pilot symbols (Timeline, Renderer,
-     Socket) using the stdlib xml.etree.ElementTree -- no third-party
+  2. Parse that XML with the stdlib xml.etree.ElementTree -- no third-party
      dependency.
-  3. Emit one clean Markdown fragment per pilot page into
+  3. Emit one clean Markdown fragment per Reference page into
      .docs-build/api-fragments/*.md.
 
 Deliberate scope decisions:
@@ -22,9 +27,17 @@ Deliberate scope decisions:
   - Private members are already excluded by Doxygen itself (EXTRACT_PRIVATE=NO
     in the Doxyfile) -- this script never has private-member XML to read in
     the first place.
-  - Overloaded members (Timeline's three constructors) get a disambiguating
-    parameter hint in their heading; every other member uses the bare
-    "Class::Member" form the rest of this site already searches for.
+  - Overloaded members (e.g. a deleted copy constructor alongside the real
+    one) get a disambiguating parameter hint in their heading; every other
+    member uses the bare "Class::Member" form the rest of this site already
+    searches for.
+  - Namespace-scope symbols that share the one `Engine` namespace compound
+    across every header (free functions, enums, type aliases, constants,
+    and the structs/classes Doxygen also nests under it) are selected by
+    which HEADER FILE declared them (Doxygen's own <location file="...">),
+    not by hardcoding a name list per page -- a page's own set of symbols is
+    still page-specific *data* (which header it reads from), but the
+    selection and rendering logic itself is generic across any header.
 
 Usage:
     python3 scripts/generate_api_docs.py
@@ -100,13 +113,18 @@ def text_of(elem):
 
 def render_type(type_elem):
     """Doxygen's own XML renders template/reference types with stray spaces
-    (e.g. "std::function< double()>", "Timeline &") -- tidy those up so the
-    generated signature matches how this codebase actually writes C++."""
+    (e.g. "std::function< double()>", "Timeline &", and -- inside a nested
+    function type like std::function<void(InputManager &input)> -- "Type
+    &name" with no space after the &) -- tidy those up so the generated
+    signature matches how this codebase actually writes C++ ("Type&"/"Type&
+    name", never "Type &"/"Type&name")."""
     raw = text_of(type_elem)
     raw = re.sub(r"<\s+", "<", raw)
     raw = re.sub(r"\s+>", ">", raw)
     raw = re.sub(r"\s+&", "&", raw)
     raw = re.sub(r"\s+\*", "*", raw)
+    raw = re.sub(r"&(\w)", r"& \1", raw)
+    raw = re.sub(r"\*(\w)", r"* \1", raw)
     return raw
 
 
@@ -149,9 +167,41 @@ def render_signature(memberdef, name_override=None):
 
 
 def member_brief(memberdef):
+    """Returns (prose, param_bullets). Doxygen's @param tags produce a
+    <parameterlist> nested inside <detaileddescription> -- a naive full-text
+    extraction would flatten "@param entity ... @param deltaTime ..." into
+    unreadable run-on prose, so parameter entries are pulled out separately
+    and rendered as their own short bullets instead."""
     brief = text_of(memberdef.find("briefdescription"))
-    detailed = text_of(memberdef.find("detaileddescription"))
-    return " ".join(p for p in (brief, detailed) if p)
+    detailed = memberdef.find("detaileddescription")
+    prose_parts = []
+    bullets = []
+    if detailed is not None:
+        for para in detailed.findall("para"):
+            parameterlist = para.find("parameterlist")
+            if parameterlist is not None:
+                for item in parameterlist.findall("parameteritem"):
+                    name = text_of(item.find("parameternamelist"))
+                    description = text_of(item.find("parameterdescription"))
+                    bullets.append(f"- `{name}`: {description}")
+            else:
+                text = text_of(para)
+                if text:
+                    prose_parts.append(text)
+    prose = " ".join(p for p in [brief] + prose_parts if p)
+    return prose, bullets
+
+
+def emit_brief(lines, memberdef):
+    """Shared by every emit_*_section function: appends a member's prose (if
+    any), then its @param bullets (if any), each followed by a blank line."""
+    prose, bullets = member_brief(memberdef)
+    if prose:
+        lines.append(prose)
+        lines.append("")
+    if bullets:
+        lines.extend(bullets)
+        lines.append("")
 
 
 def emit_member_section(lines, heading, memberdef, name_override=None):
@@ -161,10 +211,7 @@ def emit_member_section(lines, heading, memberdef, name_override=None):
     lines.append(render_signature(memberdef, name_override))
     lines.append("```")
     lines.append("")
-    brief = member_brief(memberdef)
-    if brief:
-        lines.append(brief)
-        lines.append("")
+    emit_brief(lines, memberdef)
 
 
 def emit_enum_section(lines, class_name, enum_memberdef):
@@ -184,10 +231,7 @@ def emit_enum_section(lines, class_name, enum_memberdef):
     lines.append("};")
     lines.append("```")
     lines.append("")
-    brief = member_brief(enum_memberdef)
-    if brief:
-        lines.append(brief)
-        lines.append("")
+    emit_brief(lines, enum_memberdef)
 
 
 def emit_struct_section(lines, struct_root):
@@ -205,10 +249,7 @@ def emit_struct_section(lines, struct_root):
     lines.append("};")
     lines.append("```")
     lines.append("")
-    brief = member_brief(compound)
-    if brief:
-        lines.append(brief)
-        lines.append("")
+    emit_brief(lines, compound)
 
 
 def constructor_heading(class_name, memberdef):
@@ -222,84 +263,166 @@ def constructor_heading(class_name, memberdef):
     return f"{class_name}::{class_name}({', '.join(type_names)})"
 
 
-def generate_timeline_fragment():
-    root = load_compound("Engine::Timeline", "class")
-    compound = root.find("compounddef")
+def emit_class_members(lines, compound, class_name):
+    """Emits every public-type then public-func member of a class/struct
+    compound, in declaration order -- generic across any class; nothing here
+    is specific to one. The constructor (or each overload) and destructor get
+    their own recognizable heading; every other member is "Class::Member"."""
+    for section_kind in ("public-type", "public-func"):
+        for memberdef in compound.findall(f"./sectiondef[@kind='{section_kind}']/memberdef"):
+            name = memberdef.findtext("name")
+            if name == class_name:
+                heading = constructor_heading(class_name, memberdef)
+                emit_member_section(lines, heading, memberdef, name_override=class_name)
+            elif name == f"~{class_name}":
+                emit_member_section(lines, f"{class_name}::~{class_name}", memberdef)
+            else:
+                emit_member_section(lines, f"{class_name}::{name}", memberdef)
+
+
+def emit_constant_section(lines, memberdef):
+    """Renders a namespace-scope constant (e.g. Engine::MaxPlayers) as a single
+    declaration line with its value -- generic for any such constant."""
+    name = memberdef.findtext("name")
+    type_str = render_type(memberdef.find("type"))
+    initializer = (memberdef.findtext("initializer") or "").strip()
+    prefix = "constexpr " if memberdef.get("constexpr") == "yes" else ""
+    lines.append(f"### {name}")
+    lines.append("")
+    lines.append("```cpp")
+    lines.append(f"{prefix}{type_str} {name} {initializer};")
+    lines.append("```")
+    lines.append("")
+    emit_brief(lines, memberdef)
+
+
+def _sorted_by_line(memberdefs):
+    """Doxygen's own member ordering within a section is an implementation
+    detail (Phase 4 already found one Doxygen-version difference in compound
+    filenames) -- sort by source line instead of trusting it, so fragment
+    order always matches declaration order in the actual header."""
+    return sorted(memberdefs, key=lambda m: int(m.find("location").get("line")))
+
+
+def namespace_members_from_header(ns_compound, section_kind, header_suffix):
+    """Namespace-scope members (enum/typedef/var/func) declared in one specific
+    header, identified via Doxygen's own <location file="..."> -- generic
+    across any header: every header sharing the `Engine` namespace compound
+    contributes its members to the same sectiondef, so filtering by source
+    file (rather than hardcoding a name list) is what lets a page's fragment
+    track its header automatically as symbols are added or removed."""
+    matches = [
+        memberdef
+        for memberdef in ns_compound.findall(f"./sectiondef[@kind='{section_kind}']/memberdef")
+        if memberdef.find("location").get("file", "").endswith(header_suffix)
+    ]
+    return _sorted_by_line(matches)
+
+
+def structs_from_header(ns_compound, header_suffix):
+    """Struct/class compounds nested under the Engine namespace (Doxygen tags
+    both under <innerclass>) whose own <location> matches one specific header
+    -- resolved via each <innerclass>'s refid, so a page's fragment picks up a
+    newly-added struct in its header automatically, the same way
+    namespace_members_from_header does for functions/enums/etc."""
+    candidates = []
+    for inner in ns_compound.findall("innerclass"):
+        refid = inner.get("refid")
+        if not refid.startswith("struct_"):
+            continue
+        struct_root = load_xml(f"{refid}.xml")
+        location = struct_root.find("compounddef/location")
+        if location is not None and location.get("file", "").endswith(header_suffix):
+            candidates.append(struct_root)
+    return sorted(candidates, key=lambda root: int(root.find("compounddef/location").get("line")))
+
+
+def generate_simple_class_fragment(qualified_name, output_filename):
+    """A fragment that's just one class's own members -- generic, reused for
+    every migrated class that doesn't also need namespace-scope siblings
+    (structs/enums/free functions) folded in alongside it."""
+    class_name = qualified_name.split("::")[-1]
+    compound = load_compound(qualified_name, "class").find("compounddef")
     lines = []
+    emit_class_members(lines, compound, class_name)
+    write_fragment(output_filename, lines)
 
-    # AnchorSource (public-type)
-    for memberdef in compound.findall("./sectiondef[@kind='public-type']/memberdef"):
-        emit_member_section(lines, "Timeline::AnchorSource", memberdef)
 
-    # Constructors + methods (public-func), in declaration order
-    for memberdef in compound.findall("./sectiondef[@kind='public-func']/memberdef"):
-        name = memberdef.findtext("name")
-        if name == "Timeline":
-            heading = constructor_heading("Timeline", memberdef)
-            emit_member_section(lines, heading, memberdef, name_override="Timeline")
-        else:
-            emit_member_section(lines, f"Timeline::{name}", memberdef)
-
-    write_fragment("timeline-api.md", lines)
+def generate_free_functions_fragment(header_suffix, output_filename):
+    """A fragment that's just the free functions declared in one header, with
+    no enclosing class -- generic, reused for Collision (IsColliding) and
+    ServerDispatch (HandleRequest/HandleSessionRequest)."""
+    ns_compound = load_compound("Engine", "namespace").find("compounddef")
+    lines = []
+    for memberdef in namespace_members_from_header(ns_compound, "func", header_suffix):
+        emit_member_section(lines, memberdef.findtext("name"), memberdef)
+    write_fragment(output_filename, lines)
 
 
 def generate_renderer_fragment():
-    ns_root = load_compound("Engine", "namespace")
-    ns_compound = ns_root.find("compounddef")
+    ns_compound = load_compound("Engine", "namespace").find("compounddef")
     lines = []
 
-    # WindowConfig struct
     emit_struct_section(lines, load_compound("Engine::WindowConfig", "struct"))
 
-    # ScalingMode enum
-    for memberdef in ns_compound.findall("./sectiondef[@kind='enum']/memberdef"):
-        if memberdef.findtext("name") == "ScalingMode":
-            emit_enum_section(lines, "ScalingMode", memberdef)
+    for memberdef in namespace_members_from_header(ns_compound, "enum", "Renderer/Renderer.h"):
+        emit_enum_section(lines, memberdef.findtext("name"), memberdef)
 
-    # ApplyScalingMode / NextScalingMode free functions
-    for memberdef in ns_compound.findall("./sectiondef[@kind='func']/memberdef"):
-        name = memberdef.findtext("name")
-        if name in ("ApplyScalingMode", "NextScalingMode"):
-            emit_member_section(lines, name, memberdef)
+    for memberdef in namespace_members_from_header(ns_compound, "func", "Renderer/Renderer.h"):
+        emit_member_section(lines, memberdef.findtext("name"), memberdef)
 
-    # Renderer class
-    root = load_compound("Engine::Renderer", "class")
-    compound = root.find("compounddef")
-    for memberdef in compound.findall("./sectiondef[@kind='public-func']/memberdef"):
-        name = memberdef.findtext("name")
-        if name == "Renderer":
-            heading = constructor_heading("Renderer", memberdef)
-            emit_member_section(lines, heading, memberdef, name_override="Renderer")
-        elif name == "~Renderer":
-            emit_member_section(lines, "Renderer::~Renderer", memberdef)
-        else:
-            emit_member_section(lines, f"Renderer::{name}", memberdef)
+    compound = load_compound("Engine::Renderer", "class").find("compounddef")
+    emit_class_members(lines, compound, "Renderer")
 
     write_fragment("renderer-api.md", lines)
 
 
 def generate_socket_fragment():
-    ns_root = load_compound("Engine", "namespace")
-    ns_compound = ns_root.find("compounddef")
+    ns_compound = load_compound("Engine", "namespace").find("compounddef")
     lines = []
 
-    # SocketRole enum
-    for memberdef in ns_compound.findall("./sectiondef[@kind='enum']/memberdef"):
-        if memberdef.findtext("name") == "SocketRole":
-            emit_enum_section(lines, "SocketRole", memberdef)
+    for memberdef in namespace_members_from_header(ns_compound, "enum", "Network/Socket.h"):
+        emit_enum_section(lines, memberdef.findtext("name"), memberdef)
 
-    # Socket class
-    root = load_compound("Engine::Socket", "class")
-    compound = root.find("compounddef")
-    for memberdef in compound.findall("./sectiondef[@kind='public-func']/memberdef"):
-        name = memberdef.findtext("name")
-        if name == "Socket":
-            heading = constructor_heading("Socket", memberdef)
-            emit_member_section(lines, heading, memberdef, name_override="Socket")
-        else:
-            emit_member_section(lines, f"Socket::{name}", memberdef)
+    compound = load_compound("Engine::Socket", "class").find("compounddef")
+    emit_class_members(lines, compound, "Socket")
 
     write_fragment("socket-api.md", lines)
+
+
+def generate_entity_fragment():
+    lines = []
+    emit_struct_section(lines, load_compound("Engine::Color", "struct"))
+    compound = load_compound("Engine::Entity", "class").find("compounddef")
+    emit_class_members(lines, compound, "Entity")
+    write_fragment("entity-api.md", lines)
+
+
+def generate_protocol_fragment():
+    """The stress test: one header contributing a type alias, a constexpr
+    constant, two enums, eight structs, and fourteen free functions to the
+    shared Engine namespace compound -- every one of them selected generically
+    by source header, none hardcoded by name."""
+    ns_compound = load_compound("Engine", "namespace").find("compounddef")
+    header = "Network/Protocol.h"
+    lines = []
+
+    for memberdef in namespace_members_from_header(ns_compound, "typedef", header):
+        emit_member_section(lines, memberdef.findtext("name"), memberdef)
+
+    for memberdef in namespace_members_from_header(ns_compound, "var", header):
+        emit_constant_section(lines, memberdef)
+
+    for memberdef in namespace_members_from_header(ns_compound, "enum", header):
+        emit_enum_section(lines, memberdef.findtext("name"), memberdef)
+
+    for struct_root in structs_from_header(ns_compound, header):
+        emit_struct_section(lines, struct_root)
+
+    for memberdef in namespace_members_from_header(ns_compound, "func", header):
+        emit_member_section(lines, memberdef.findtext("name"), memberdef)
+
+    write_fragment("protocol-api.md", lines)
 
 
 def write_fragment(filename, lines):
@@ -311,9 +434,20 @@ def write_fragment(filename, lines):
 
 def main():
     run_doxygen()
-    generate_timeline_fragment()
+
+    generate_simple_class_fragment("Engine::Timeline", "timeline-api.md")
     generate_renderer_fragment()
     generate_socket_fragment()
+
+    # Documentation Phase 5: remaining public Engine API.
+    generate_simple_class_fragment("Engine::Application", "application-api.md")
+    generate_entity_fragment()
+    generate_simple_class_fragment("Engine::PhysicsSystem", "physics-system-api.md")
+    generate_simple_class_fragment("Engine::InputManager", "input-manager-api.md")
+    generate_free_functions_fragment("Collision/Collision.h", "collision-api.md")
+    generate_protocol_fragment()
+    generate_simple_class_fragment("Engine::PlayerRegistry", "player-registry-api.md")
+    generate_free_functions_fragment("Network/ServerDispatch.h", "server-dispatch-api.md")
 
 
 if __name__ == "__main__":

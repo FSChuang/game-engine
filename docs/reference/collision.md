@@ -11,11 +11,15 @@
 For the mental model, see [System: Collision](../systems/collision.md). This
 page is deliberately just the API facts.
 
-## IsColliding
+## API Reference
 
-```cpp
-bool IsColliding(const Entity& a, const Entity& b);
-```
+<!-- Generated from Engine/src/Engine/Collision/Collision.h by
+     scripts/generate_api_docs.py — do not hand-edit the section below; edit
+     the header's /// comments instead and regenerate. -->
+
+--8<-- "collision-api.md"
+
+## Behavior notes
 
 **Parameters** — `a`, `b`: the two entities to test, read via their
 `GetPosition()`/`GetSize()`.
