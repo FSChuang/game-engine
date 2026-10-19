@@ -71,10 +71,18 @@ void Connect(const std::string& endpoint);
 void Disconnect(const std::string& endpoint);
 void Subscribe(const std::string& topic);
 
+void SetHighWaterMark(int highWaterMark);
+
 void Send(const std::string& message);
 std::string Receive();
 std::optional<std::string> TryReceive();
 ```
+
+`SetHighWaterMark` raises ZeroMQ's send/receive high-water-mark (default
+1000 outstanding messages) — call it before `Bind()`/`Connect()` if a
+socket's sustained message rate can exceed that default (e.g. a
+high-iteration-count benchmark), otherwise there is nothing to change. See
+[Reference: Socket](../../reference/socket.md) for the exact behavior.
 
 ## Thread affinity — the most important fact about this class
 
@@ -120,7 +128,7 @@ shared across threads; a `zmq::socket_t` may not) and is not something
 <dd>ZeroMQ, via cppzmq. Part of the optional <code>EngineNetwork</code> target — skipped entirely on a machine without cppzmq installed.</dd>
 
 <dt>Public Entry Points</dt>
-<dd><code>Bind</code>, <code>Connect</code>, <code>Disconnect</code>, <code>Subscribe</code>, <code>Send</code>, <code>Receive</code>, <code>TryReceive</code>.</dd>
+<dd><code>Bind</code>, <code>Connect</code>, <code>Disconnect</code>, <code>Subscribe</code>, <code>SetHighWaterMark</code>, <code>Send</code>, <code>Receive</code>, <code>TryReceive</code>.</dd>
 
 <dt>Known Limitations / Failure Modes</dt>
 <dd>No receive timeout of any kind — a blocking <code>Receive()</code> with no responding peer blocks forever. <code>Bind</code>/<code>Connect</code>/<code>Send</code>/<code>Receive</code> throw on genuine ZeroMQ failure — most paths throw <code>zmq::error_t</code> (cppzmq's own exception), but <code>Receive()</code>'s own explicit "no message received" check throws <code>std::runtime_error</code> instead; see <a href="../../reference/socket.md">Reference: Socket</a>. <code>TryReceive()</code> is the one method that reports "nothing yet" as <code>std::nullopt</code> rather than an exception.</dd>

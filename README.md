@@ -20,17 +20,17 @@ dependency; see [Example Project](#example-project) below.
 
 - **Application** — SDL lifecycle and the main update/render loop
 - **Renderer** — window and drawing, with constant and proportional scaling modes
-- **Entity** — a generic position/size/color/velocity object, no behavior
+- **GameObject** / **GameObjectRegistry** — a compositional runtime object model (identity, Transform, and independently-optional render/velocity/network properties), plus a small registry that owns a set of them, keyed by id
 - **Physics** — configurable gravity via semi-implicit Euler integration
 - **Input** — polled keyboard state, held vs. just-pressed
 - **Collision** — strict axis-aligned bounding-box overlap
 - **Timeline** — logical time (pause, scale, tic size), independent of the wall clock, with parent/child composition
-- **Networking** — an explicit wire protocol (encode/decode), server-side player bookkeeping and request/reply dispatch, and an optional ZeroMQ `Socket` wrapper (REQ/REP and PUB/SUB)
+- **Networking** — an explicit player/platform wire protocol (encode/decode), server-side player bookkeeping and request/reply dispatch, a second explicit Full-State/Delta-State object-exchange wire format for comparing data-exchange strategies, and an optional ZeroMQ `Socket` wrapper (REQ/REP and PUB/SUB)
 
 ## Repository Structure
 
 ```
-Engine/     the reusable engine (static library, plus two networking targets)
+Engine/     the reusable engine (SDL-backed + SDL-free static libraries, plus two networking targets)
 Tests/      engine unit tests, run via ctest
 docs/       the MkDocs Material documentation site
 scripts/    documentation tooling (Doxygen API-fragment generator)

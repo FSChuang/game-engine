@@ -6,8 +6,10 @@ includes, already enabled in mkdocs.yml).
 Started as a 3-class pilot (Documentation Phase 4: Timeline, Renderer,
 Socket); Documentation Phase 5 widened Doxyfile's INPUT to the complete
 public Engine API header tree and extended this script to cover the
-remaining public surface: Application, Entity, PhysicsSystem, InputManager,
-Collision, Protocol, PlayerRegistry, ServerDispatch.
+remaining public surface: Application, Entity (later replaced by GameObject/
+GameObjectRegistry — Milestone 3's object-model checkpoint), PhysicsSystem,
+InputManager, Collision, Protocol, PlayerRegistry, ServerDispatch. A later
+Milestone 3 checkpoint (CSC 581 performance) added ExchangeProtocol.
 
 Pipeline this script performs, end to end:
   1. Run `doxygen Doxyfile` (repo root) -> .docs-build/doxygen-xml/*.xml
@@ -414,13 +416,17 @@ def generate_gameobject_fragment():
     write_fragment("gameobject-api.md", lines)
 
 
-def generate_protocol_fragment():
-    """The stress test: one header contributing a type alias, a constexpr
-    constant, two enums, eight structs, and fourteen free functions to the
-    shared Engine namespace compound -- every one of them selected generically
-    by source header, none hardcoded by name."""
+def generate_namespace_fragment_from_header(header, output_filename):
+    """Generic fragment for a header that contributes purely namespace-scope
+    symbols (no enclosing class) to the shared `Engine` namespace compound --
+    any mix of type alias, constexpr constant, enum, struct, and free
+    function, every one selected by source header via Doxygen's own
+    <location file="...">, never hardcoded by name. Reused by any such
+    header (Protocol.h, ExchangeProtocol.h, ...); a header that also has an
+    enclosing class (e.g. Socket.h, GameObject.h) composes this same
+    namespace-scope selection logic alongside its own emit_class_members
+    call instead of using this directly."""
     ns_compound = load_compound("Engine", "namespace").find("compounddef")
-    header = "Network/Protocol.h"
     lines = []
 
     for memberdef in namespace_members_from_header(ns_compound, "typedef", header):
@@ -438,7 +444,25 @@ def generate_protocol_fragment():
     for memberdef in namespace_members_from_header(ns_compound, "func", header):
         emit_member_section(lines, memberdef.findtext("name"), memberdef)
 
-    write_fragment("protocol-api.md", lines)
+    write_fragment(output_filename, lines)
+
+
+def generate_protocol_fragment():
+    """The stress test: one header contributing a type alias, a constexpr
+    constant, two enums, eight structs, and fourteen free functions to the
+    shared Engine namespace compound -- every one of them selected generically
+    by source header, none hardcoded by name."""
+    generate_namespace_fragment_from_header("Network/Protocol.h", "protocol-api.md")
+
+
+def generate_exchange_protocol_fragment():
+    """CSC 581 performance checkpoint: ExchangeProtocol.h contributes a
+    struct (ExchangeObjectState), a constexpr constant (MaxExchangeObjects),
+    an enum (ExchangeStrategy), a struct (ExchangeFrame), and two free
+    functions (EncodeExchangeFrame/DecodeExchangeFrame) -- the exact same
+    kind of purely-namespace-scope header as Protocol.h, so this reuses
+    generate_namespace_fragment_from_header rather than duplicating it."""
+    generate_namespace_fragment_from_header("Network/ExchangeProtocol.h", "exchange-protocol-api.md")
 
 
 def write_fragment(filename, lines):
@@ -463,6 +487,7 @@ def main():
     generate_simple_class_fragment("Engine::InputManager", "input-manager-api.md")
     generate_free_functions_fragment("Collision/Collision.h", "collision-api.md")
     generate_protocol_fragment()
+    generate_exchange_protocol_fragment()
     generate_simple_class_fragment("Engine::PlayerRegistry", "player-registry-api.md")
     generate_free_functions_fragment("Network/ServerDispatch.h", "server-dispatch-api.md")
 

@@ -44,6 +44,13 @@ This page is deliberately just the API facts.
 - **`Disconnect`** is valid for any role that has called `Connect` — most
   meaningfully `Subscribe`, which is the only role that routinely connects
   to more than one endpoint.
+- **`SetHighWaterMark`** only matters once a socket's sustained message rate
+  can exceed cppzmq's own default of 1000 outstanding messages (e.g. the
+  CSC 581 performance benchmark's high-iteration-count PUB/SUB exchange) —
+  below that, the default is unaffected and nothing needs to call this.
+  Call it before `Bind()`/`Connect()`; it makes no delivery *guarantee*, it
+  only raises the point at which ZeroMQ starts dropping (PUB) or blocking
+  (most other roles) instead of accepting more.
 
 ## See Also
 

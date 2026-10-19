@@ -1,9 +1,12 @@
 # Protocol
 
-`Protocol` defines every message the Engine's networking layer knows how to
-speak, and the pure functions that turn each one into bytes and back. It has
-no transport dependency at all — no sockets, no ZeroMQ — so it builds and
-unit-tests everywhere `EngineNetworkCore` does.
+`Protocol` defines the Engine's player/platform multiplayer messages, and the
+pure functions that turn each one into bytes and back. It has no transport
+dependency at all — no sockets, no ZeroMQ — so it builds and unit-tests
+everywhere `EngineNetworkCore` does. A second, independent wire format,
+`ExchangeProtocol` (CSC 581 performance checkpoint — Full-State/Delta-State
+object exchange), lives alongside it in the same target; see
+[Reference: Protocol](../../reference/protocol.md#exchange-protocol-csc-581-performance-checkpoint).
 
 ## What problem it solves
 

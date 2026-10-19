@@ -101,6 +101,44 @@ by hand, checked directly against `Protocol.cpp`'s own size constants:
       count.
     - Never throws, never reads past the end of `bytes`.
 
+## Exchange Protocol (CSC 581 performance checkpoint)
+
+`Engine/src/Engine/Network/ExchangeProtocol.h` is a second, independent wire
+format — not an extension of `Protocol` above — used to compare a Full-State
+and a Delta-State object-exchange strategy. Same encoding conventions as
+`Protocol` (big-endian fixed-width integers, IEEE-754 float bit patterns via
+`std::memcpy`), but its own message shape: `ExchangeStrategy` is a leading tag
+telling a receiver whether to replace its entire tracked object set
+(`FullState`) or merge the frame's records into it (`DeltaState`) — that
+receiver-side behavior, not the byte layout, is what the two strategies
+actually differ on; the record encoding itself is identical either way.
+
+<!-- Generated from Engine/src/Engine/Network/ExchangeProtocol.h by
+     scripts/generate_api_docs.py — do not hand-edit the section below; edit
+     the header's /// comments instead and regenerate. Wire-format facts
+     (byte layouts, sizes) are NOT generated and stay hand-written below. -->
+
+--8<-- "exchange-protocol-api.md"
+
+**Field wire sizes**, checked directly against `ExchangeProtocol.cpp`'s own
+size constants:
+
+- **`ExchangeObjectState`** — 20 bytes (`Id` as `u32`, then four `float`s, each 4 bytes).
+
+**Exact wire layout** — a frame is `7 + 20×recordCount` bytes total:
+
+```
+[strategy:u8 (1 = FullState, 2 = DeltaState)]
+[iterationSeq:u32]
+[recordCount:u16]
+[records — recordCount × ExchangeObjectState, 20 bytes each]
+```
+
+`DecodeExchangeFrame` rejects (returns `std::nullopt`) an unrecognized
+strategy tag, a `recordCount` exceeding `MaxExchangeObjects`, and any
+truncated/padded buffer — the same exact-size validation discipline as
+`Protocol`'s own decoders above.
+
 ## See Also
 
 - [System: Protocol](../systems/networking/protocol.md)

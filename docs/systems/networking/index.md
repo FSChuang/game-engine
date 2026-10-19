@@ -13,9 +13,9 @@ Networking is split into two CMake targets so that its logic never depends
 on a real transport to build or test:
 
 - **`EngineNetworkCore`** — pure C++, zero external dependencies beyond the
-  standard library. Contains `Protocol`, `PlayerRegistry`, and
-  `ServerDispatch`. Builds and unit-tests on any machine, with or without
-  ZeroMQ installed.
+  standard library. Contains `Protocol`, `PlayerRegistry`, `ServerDispatch`,
+  and `ExchangeProtocol`. Builds and unit-tests on any machine, with or
+  without ZeroMQ installed.
 - **`EngineNetwork`** — the optional transport target. Contains `Socket`,
   the one piece that depends on ZeroMQ (via cppzmq). Skipped entirely by
   CMake if cppzmq isn't found — everything in `EngineNetworkCore` is
@@ -32,6 +32,7 @@ this split matters, not just what it is.
 | **PlayerRegistry** | Pure server-side player bookkeeping |
 | **ServerDispatch** | Request → reply logic over a `PlayerRegistry` |
 | **Socket** | RAII ZeroMQ transport wrapper |
+| **ExchangeProtocol** | Full-State/Delta-State object-exchange wire format (CSC 581 performance checkpoint) — see [Reference: Protocol](../../reference/protocol.md#exchange-protocol-csc-581-performance-checkpoint) |
 
 ## What Engine does NOT provide
 
@@ -60,10 +61,10 @@ each is a decision left entirely to whatever links these primitives:
 <dd>No singleton or engine-owned instance of anything here. Every primitive is constructed and owned entirely by whatever consumer links it.</dd>
 
 <dt>Thread Affinity</dt>
-<dd><code>Protocol</code> functions and <code>ServerDispatch</code> are pure and safe from any thread. <code>PlayerRegistry</code> has no internal synchronization. <code>Socket</code> is strictly single-thread-owned — see <a href="../../systems/networking/socket.md">System: Socket</a>.</dd>
+<dd><code>Protocol</code>, <code>ExchangeProtocol</code>, and <code>ServerDispatch</code> functions are pure and safe from any thread. <code>PlayerRegistry</code> has no internal synchronization. <code>Socket</code> is strictly single-thread-owned — see <a href="../../systems/networking/socket.md">System: Socket</a>.</dd>
 
 <dt>Blocking Behavior</dt>
-<dd>Only <code>Socket::Receive()</code> blocks (indefinitely, with no timeout). Every other function across all four primitives is non-blocking, synchronous computation.</dd>
+<dd>Only <code>Socket::Receive()</code> blocks (indefinitely, with no timeout). Every other function across every other primitive is non-blocking, synchronous computation.</dd>
 
 <dt>External Dependencies</dt>
 <dd><code>EngineNetworkCore</code>: none. <code>EngineNetwork</code>: ZeroMQ, via cppzmq — optional at the build-graph level.</dd>
