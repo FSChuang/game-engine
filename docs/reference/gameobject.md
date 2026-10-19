@@ -48,7 +48,7 @@ about it requires SDL, a window, a renderer, or the Network module to
 exist. This is why a headless process (e.g. Spare Parts' dedicated
 multiplayer server) can use `GameObject`/`GameObjectRegistry` without
 linking SDL at all — see `EngineCore` in
-[Project Structure](../../PROJECT_STRUCTURE.md).
+[`PROJECT_STRUCTURE.md`](https://github.com/FSChuang/game-engine/blob/main/PROJECT_STRUCTURE.md).
 
 ## Minimal example
 

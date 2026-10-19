@@ -71,4 +71,4 @@ application.Run(
 - [System: Renderer](../systems/renderer.md)
 - [Concept: Rendering & Scaling](../concepts/rendering-and-scaling.md)
 - [Guide: Toggle Scaling Mode](../guides/toggle-scaling-mode.md)
-- [Reference: GameObject](entity.md)
+- [Reference: GameObject](gameobject.md)

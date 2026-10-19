@@ -49,5 +49,5 @@ bool touchingOnly = Engine::IsColliding(a, c); // false — edges only touch
 ## See Also
 
 - [System: Collision](../systems/collision.md)
-- [Reference: GameObject](entity.md)
+- [Reference: GameObject](gameobject.md)
 - [System: Physics](../systems/physics.md)

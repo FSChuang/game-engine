@@ -56,5 +56,5 @@ physics.Update(ball, 0.5f);
 
 - [System: Physics](../systems/physics.md)
 - [Guide: Configure Gravity](../guides/configure-gravity.md)
-- [Reference: GameObject](entity.md)
+- [Reference: GameObject](gameobject.md)
 - [System: Collision](../systems/collision.md)
