@@ -1,6 +1,6 @@
 #include "Engine/Physics/PhysicsSystem.h"
 
-#include "Engine/Entity/Entity.h"
+#include "Engine/GameObject/GameObject.h"
 
 namespace Engine
 {
@@ -19,12 +19,14 @@ namespace Engine
 		return m_Gravity;
 	}
 
-	void PhysicsSystem::Update(Entity& entity, float deltaTime) const
+	void PhysicsSystem::Update(GameObject& object, float deltaTime) const
 	{
-		Vector2 velocity = entity.GetVelocity();
-		velocity.Y += m_Gravity * deltaTime;
-		entity.SetVelocity(velocity);
+		ENGINE_ASSERT(object.HasVelocity(), "PhysicsSystem::Update requires a velocity property");
 
-		entity.Move({ velocity.X * deltaTime, velocity.Y * deltaTime });
+		Vector2 velocity = object.GetVelocity();
+		velocity.Y += m_Gravity * deltaTime;
+		object.SetVelocity(velocity);
+
+		object.Move({ velocity.X * deltaTime, velocity.Y * deltaTime });
 	}
 }

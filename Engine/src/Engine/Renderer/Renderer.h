@@ -9,7 +9,7 @@ struct SDL_Renderer;
 
 namespace Engine
 {
-	class Entity;
+	class GameObject;
 
 	/// Window/renderer configuration the game defines, not a value hidden inside the engine
 	/// (ENGINEERING_SPEC.md §9: configurable data stays at the top level).
@@ -57,9 +57,11 @@ namespace Engine
 		/// Presents the completed frame to the window.
 		void EndFrame();
 
-		/// Draws an entity as a filled rectangle using its position, size, and color, scaled
-		/// according to the current scaling mode.
-		void DrawEntity(const Entity& entity);
+		/// Draws a GameObject as a filled rectangle using its position, size, and color,
+		/// scaled according to the current scaling mode. Objects with no render property
+		/// (HasRender() == false) are silently skipped — a hidden object (spawn point, death
+		/// zone, boundary) never needs to invent a color just to exist.
+		void DrawObject(const GameObject& gameObject);
 
 		/// Sets the scaling mode used by every subsequent DrawEntity() call.
 		void SetScalingMode(ScalingMode mode);

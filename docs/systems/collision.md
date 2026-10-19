@@ -5,7 +5,7 @@ no class, no state. That's the entire subsystem.
 
 ## What it does
 
-`IsColliding(const Entity& a, const Entity& b)` answers exactly one
+`IsColliding(const GameObject& a, const GameObject& b)` answers exactly one
 question: do these two entities' rectangles overlap right now, using each
 entity's position and size. Touching edges or a single shared corner do
 **not** count as colliding — the overlap must be strict.
@@ -33,7 +33,7 @@ entity's position and size. Touching edges or a single shared corner do
 <dd>N/A — a pure free function, not a class. Nothing to construct or own.</dd>
 
 <dt>Thread Affinity</dt>
-<dd>Safe to call from any thread — it only reads its two <code>const Entity&amp;</code> arguments and touches no shared state.</dd>
+<dd>Safe to call from any thread — it only reads its two <code>const GameObject&amp;</code> arguments and touches no shared state.</dd>
 
 <dt>Blocking Behavior</dt>
 <dd>None — pure computation.</dd>
@@ -45,10 +45,10 @@ entity's position and size. Touching edges or a single shared corner do
 <dd>No — holds no state between calls.</dd>
 
 <dt>External Dependencies</dt>
-<dd>None beyond <code>Engine::Entity</code>/<code>Vector2</code>.</dd>
+<dd>None beyond <code>Engine::GameObject</code>/<code>Vector2</code>.</dd>
 
 <dt>Public Entry Points</dt>
-<dd><code>IsColliding(const Entity&amp;, const Entity&amp;)</code>.</dd>
+<dd><code>IsColliding(const GameObject&amp;, const GameObject&amp;)</code>.</dd>
 
 <dt>Known Limitations / Failure Modes</dt>
 <dd>Pairwise only. No collision response. No broad-phase acceleration structure — every call is an independent O(1) test.</dd>

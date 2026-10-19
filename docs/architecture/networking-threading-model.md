@@ -17,7 +17,7 @@ made entirely outside the Engine.
   thread.
 
 There is no "networking subsystem" running anywhere inside the Engine.
-`Socket` is exactly as thread-passive as `Entity` or `PhysicsSystem` — a
+`Socket` is exactly as thread-passive as `GameObject` or `PhysicsSystem` — a
 plain object that does nothing until called.
 
 ## Caller responsibility

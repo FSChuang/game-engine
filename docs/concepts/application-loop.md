@@ -29,7 +29,7 @@ Then it repeats, from step 1, until the loop condition becomes false.
 
 ## Where your code fits
 
-`Application` never touches `PhysicsSystem`, `Entity`, `Collision`, or
+`Application` never touches `PhysicsSystem`, `GameObject`, `Collision`, or
 anything else your game defines — it doesn't know they exist. Your update
 callback is *entirely* responsible for driving them:
 
@@ -37,7 +37,7 @@ callback is *entirely* responsible for driving them:
 [](Engine::InputManager& input, float deltaTime)
 {
 	// Your game's own systems run here — Application has no idea what
-	// PhysicsSystem, Entity, or Collision even are.
+	// PhysicsSystem, GameObject, or Collision even are.
 	myPhysics.Update(myPlayer, deltaTime);
 }
 ```

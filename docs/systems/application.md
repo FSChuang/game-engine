@@ -20,7 +20,7 @@ to touch `SDL_Init`/`SDL_Quit` itself.
 
 ## What it does NOT own
 
-- **No `PhysicsSystem`, `Entity`, or `Collision`.** `Application` has no idea
+- **No `PhysicsSystem`, `GameObject`, or `Collision`.** `Application` has no idea
   these types exist. A game constructs and updates them itself, from inside
   the update callback it hands to `Run`.
 - **No networking.** Nothing under `Engine/Network/` is referenced by

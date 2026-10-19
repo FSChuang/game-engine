@@ -46,7 +46,7 @@ callable with a matching signature works, not just lambdas.
 
 `Application` owns `Renderer` and `Timeline` via `Scope<T>` (`std::unique_ptr`)
 and `InputManager` as a plain member. It owns nothing your game defines —
-`PhysicsSystem`, `Entity`, `Collision`, and any networking types are never
+`PhysicsSystem`, `GameObject`, `Collision`, and any networking types are never
 referenced by `Application` at all.
 
 ## Minimal example

@@ -66,7 +66,7 @@ deterministic timing, and simple multiplayer networking.
 </div>
 
 <div class="ge-card ge-card--linked" markdown>
-<p class="ge-card__title" markdown>[Entity](systems/entity.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
+<p class="ge-card__title" markdown>[GameObject](systems/gameobject.md){: .ge-card__link } <span class="ge-card__arrow">→</span></p>
 <p class="ge-card__purpose">A generic position + size + color + velocity object — no behavior.</p>
 <span class="ge-card__tag">Core</span>
 </div>

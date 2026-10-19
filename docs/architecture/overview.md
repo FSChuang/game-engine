@@ -21,7 +21,7 @@ later.
 <div class="ge-card ge-card--static" markdown>
 <p class="ge-card__title">Engine (this repository)</p>
 <p class="ge-card__purpose">
-Application &middot; Renderer &middot; Entity &middot; PhysicsSystem &middot;
+Application &middot; Renderer &middot; GameObject &middot; PhysicsSystem &middot;
 InputManager &middot; Collision &middot; Timeline &middot; Protocol &middot;
 PlayerRegistry &middot; ServerDispatch &middot; Socket
 </p>
@@ -50,7 +50,7 @@ actually lives in the game layer, it's named as such.
 | Core | `Engine/Core/Core.h` | Ownership aliases (`Scope`/`Ref`), `Vector2`, `ENGINE_ASSERT` |
 | Application | `Engine/Core/Application.h` | Owns the SDL lifecycle and the main update/render loop |
 | Renderer | `Engine/Renderer/Renderer.h` | Window + drawing, constant/proportional scaling |
-| Entity | `Engine/Entity/Entity.h` | Generic position/size/color/velocity object |
+| GameObject | `Engine/GameObject/GameObject.h` | Generic position/size/color/velocity object |
 | Physics | `Engine/Physics/PhysicsSystem.h` | Configurable-gravity integration |
 | Input | `Engine/Input/InputManager.h` | Polled keyboard state |
 | Collision | `Engine/Collision/Collision.h` | Strict AABB overlap test |
@@ -66,10 +66,10 @@ actually lives in the game layer, it's named as such.
   `SDL_Quit()` runs.
 - **`Renderer`** owns the raw `SDL_Window*`/`SDL_Renderer*` handles via RAII
   and is neither copyable nor movable — there is exactly one owner, always.
-- **`Entity`**, **`PhysicsSystem`**, and **`Collision`** hold no ownership
+- **`GameObject`**, **`PhysicsSystem`**, and **`Collision`** hold no ownership
   relationship to each other at all: `PhysicsSystem` and `IsColliding` both
-  just *operate on* whatever `Entity` a caller passes in. Nothing here owns
-  an `Entity` — that's a game-layer decision.
+  just *operate on* whatever `GameObject` a caller passes in. Nothing here owns
+  an `GameObject` — that's a game-layer decision.
 - **Networking types carry no thread of their own.** `Socket` is a
   thread-affine resource wrapper, not a worker — see the System Contract
   below. Every worker-thread pattern in this project's actual networking
@@ -82,16 +82,16 @@ graph TD
     Renderer["Renderer"]
     Input["InputManager"]
     Timeline["Timeline"]
-    Entity["Entity"]
+    GameObject["GameObject"]
     Physics["PhysicsSystem"]
     Collision["Collision"]
 
     App -->|owns| Renderer
     App -->|owns| Input
     App -->|owns| Timeline
-    Renderer -->|draws| Entity
-    Physics -->|updates| Entity
-    Collision -->|tests| Entity
+    Renderer -->|draws| GameObject
+    Physics -->|updates| GameObject
+    Collision -->|tests| GameObject
 
     subgraph NET["Networking — independent of Application"]
         Socket["Socket"]

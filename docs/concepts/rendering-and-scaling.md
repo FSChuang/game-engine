@@ -23,7 +23,7 @@ Proportional:  result.X = value.X * (currentResolution.X / referenceResolution.X
                result.Y = value.Y * (currentResolution.Y / referenceResolution.Y)
 ```
 
-`Renderer::DrawEntity` applies this **twice** per entity, independently — once
+`Renderer::DrawObject` applies this **twice** per entity, independently — once
 to its position, once to its size — using whatever the window's current size
 actually is at the moment of that draw call.
 
@@ -45,7 +45,7 @@ preservation.
 ## Why size is scaled too, not just position
 
 Scaling only position while leaving size untouched would make entities
-correctly *placed* but the wrong shape relative to the window. `DrawEntity`
+correctly *placed* but the wrong shape relative to the window. `DrawObject`
 scales both with the same call, so an entity's proportions relative to the
 window stay consistent under `Proportional` mode.
 

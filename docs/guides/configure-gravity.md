@@ -7,7 +7,7 @@ Make an entity accelerate downward (or upward, or not at all) using
 
 ## Prerequisites
 
-- An `Entity` to update.
+- An `GameObject` to update.
 - A per-frame `deltaTime` source — typically
   `application.GetGameTimeline().GetDeltaTime()`, or the `deltaTime` your
   update callback already receives.

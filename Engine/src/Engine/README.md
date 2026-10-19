@@ -9,7 +9,7 @@ never in the engine (ENGINEERING_SPEC.md §0 & §5).
 |--------------|--------------------------------------------------|------------------|
 | `Core/`      | Shared plumbing: ownership aliases, assert, app/game-loop, time | Task 1 |
 | `Renderer/`  | Window + rendering wrappers; scaling modes       | Task 1, Task 6   |
-| `Entity/`    | Generic game-object system (position + renderable)| Task 2          |
+| `GameObject/`| Compositional runtime game-object model (identity + Transform + optional render/velocity/network properties) | Task 2, Milestone 3 |
 | `Physics/`   | Physics + configurable gravity                    | Task 3          |
 | `Input/`     | Keyboard-state abstraction (`IsKeyPressed`)       | Task 4          |
 | `Collision/` | Bounding-box collision detection                  | Task 5          |
@@ -22,5 +22,6 @@ never in the engine (ENGINEERING_SPEC.md §0 & §5).
 2. Add the `.cpp` to the source list in `Engine/CMakeLists.txt`.
 3. Add a unit test under `Tests/` (§10 — engine logic must be testable without a window).
 
-Design entities so they can evolve toward a component / property model later
-(Milestone 3) — keep game logic out of the entity base type (ENGINEERING_SPEC.md §5).
+`GameObject` (Milestone 3) is the component/property-driven model that note anticipated:
+one identity + Transform, plus independently-optional render/velocity/network properties.
+Composition instead of inheritance — keep game logic out of it (ENGINEERING_SPEC.md §5).

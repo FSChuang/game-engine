@@ -1,6 +1,6 @@
 # Physics
 
-`PhysicsSystem` applies configurable gravity to one `Entity` at a time via
+`PhysicsSystem` applies configurable gravity to one `GameObject` at a time via
 semi-implicit Euler integration. It is a single, small piece of motion math
 — nothing about "physics" beyond gravity and velocity exists here.
 
@@ -17,7 +17,7 @@ Only its own configured gravity value (a single `float`). Nothing else.
 
 ## What it does NOT own
 
-- **No entity list.** `Update` takes an `Entity&` argument — `PhysicsSystem`
+- **No entity list.** `Update` takes an `GameObject&` argument — `PhysicsSystem`
   holds no reference to any entity between calls, and has no idea how many
   entities exist or which ones a game cares about.
 - **No world or scene.** There is no concept of "all physics objects" or a
@@ -35,7 +35,7 @@ explicit PhysicsSystem(float gravity);
 void SetGravity(float gravity);
 float GetGravity() const;
 
-void Update(Entity& entity, float deltaTime) const;
+void Update(GameObject& entity, float deltaTime) const;
 ```
 
 ## Important semantics
@@ -80,13 +80,13 @@ wherever it wants, typically `Application`'s game timeline
 
 <dl>
 <dt>Purpose</dt>
-<dd>Applies configurable gravity to one <code>Entity</code> via semi-implicit Euler integration, on demand.</dd>
+<dd>Applies configurable gravity to one <code>GameObject</code> via semi-implicit Euler integration, on demand.</dd>
 
 <dt>Owner</dt>
 <dd>Whichever code constructs it — typically the game layer. One instance can be reused across every entity that shares its gravity value.</dd>
 
 <dt>Thread Affinity</dt>
-<dd>No internal synchronization. <code>Update</code> mutates the <code>Entity&amp;</code> passed in, so concurrent calls against the same entity from multiple threads would race.</dd>
+<dd>No internal synchronization. <code>Update</code> mutates the <code>GameObject&amp;</code> passed in, so concurrent calls against the same entity from multiple threads would race.</dd>
 
 <dt>Blocking Behavior</dt>
 <dd>None — pure computation.</dd>
@@ -98,10 +98,10 @@ wherever it wants, typically `Application`'s game timeline
 <dd>Yes — one <code>float</code> gravity value, nothing else.</dd>
 
 <dt>External Dependencies</dt>
-<dd>None beyond <code>Engine::Entity</code>/<code>Vector2</code> — no SDL.</dd>
+<dd>None beyond <code>Engine::GameObject</code>/<code>Vector2</code> — no SDL.</dd>
 
 <dt>Public Entry Points</dt>
-<dd><code>PhysicsSystem(float)</code>, <code>SetGravity</code>/<code>GetGravity</code>, <code>Update(Entity&amp;, float)</code>.</dd>
+<dd><code>PhysicsSystem(float)</code>, <code>SetGravity</code>/<code>GetGravity</code>, <code>Update(GameObject&amp;, float)</code>.</dd>
 
 <dt>Known Limitations / Failure Modes</dt>
 <dd>No collision response of any kind. No fixed or sub-stepped timestep — one <code>Update</code> call integrates exactly once, however large <code>deltaTime</code> is. Gravity affects Y velocity only.</dd>

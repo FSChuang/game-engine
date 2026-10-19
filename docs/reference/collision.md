@@ -38,16 +38,16 @@ the result to be `true`.
 ## Minimal example
 
 ```cpp
-Engine::Entity a({ 0.0f, 0.0f }, { 10.0f, 10.0f }, { 255, 255, 255, 255 });
-Engine::Entity b({ 5.0f, 5.0f }, { 10.0f, 10.0f }, { 255, 255, 255, 255 });
+Engine::GameObject a({ 0.0f, 0.0f }, { 10.0f, 10.0f }, { 255, 255, 255, 255 });
+Engine::GameObject b({ 5.0f, 5.0f }, { 10.0f, 10.0f }, { 255, 255, 255, 255 });
 bool overlapping = Engine::IsColliding(a, b); // true
 
-Engine::Entity c({ 10.0f, 0.0f }, { 10.0f, 10.0f }, { 255, 255, 255, 255 });
+Engine::GameObject c({ 10.0f, 0.0f }, { 10.0f, 10.0f }, { 255, 255, 255, 255 });
 bool touchingOnly = Engine::IsColliding(a, c); // false — edges only touch
 ```
 
 ## See Also
 
 - [System: Collision](../systems/collision.md)
-- [Reference: Entity](entity.md)
+- [Reference: GameObject](entity.md)
 - [System: Physics](../systems/physics.md)

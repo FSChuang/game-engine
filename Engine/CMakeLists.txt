@@ -5,13 +5,28 @@
 
 find_package(SDL3 REQUIRED)
 
-# List engine source files here as you implement each system.
-add_library(Engine STATIC
+# Pure C++ engine logic with no SDL (or any other platform/transport) dependency: the
+# runtime object model (Milestone 3) plus the two systems that only ever operate on it.
+# Kept as its own target, separate from the SDL-backed Engine target below, specifically
+# so a headless process (e.g. a dedicated multiplayer server) can use GameObject/Physics/
+# Collision without being forced to link SDL3 at all — mirrors EngineNetworkCore's own
+# reasoning in this same spirit, one folder down.
+add_library(EngineCore STATIC
+    src/Engine/GameObject/GameObject.cpp
+    src/Engine/GameObject/GameObjectRegistry.cpp
     src/Engine/Collision/Collision.cpp
-    src/Engine/Core/Application.cpp
-    src/Engine/Entity/Entity.cpp
-    src/Engine/Input/InputManager.cpp
     src/Engine/Physics/PhysicsSystem.cpp
+)
+target_include_directories(EngineCore PUBLIC src)
+target_compile_features(EngineCore PUBLIC cxx_std_17)
+
+# The SDL-backed half of the engine: window/input/rendering and the timeline (Timeline
+# reads SDL's monotonic clock for its default anchor). Publicly links EngineCore so games
+# that link Engine still get GameObject/Physics/Collision transitively, unchanged from
+# before this split.
+add_library(Engine STATIC
+    src/Engine/Core/Application.cpp
+    src/Engine/Input/InputManager.cpp
     src/Engine/Renderer/Renderer.cpp
     src/Engine/Time/Timeline.cpp
 )
@@ -19,7 +34,7 @@ add_library(Engine STATIC
 # PUBLIC so games that link Engine can `#include "Engine/..."` and get SDL too.
 target_include_directories(Engine PUBLIC src)
 target_compile_features(Engine PUBLIC cxx_std_17)
-target_link_libraries(Engine PUBLIC SDL3::SDL3)
+target_link_libraries(Engine PUBLIC SDL3::SDL3 EngineCore)
 
 # Networking protocol/registry (Milestone 2 Section 2): pure C++ logic with no
 # ZeroMQ (or any other transport) dependency, so it builds and unit-tests everywhere

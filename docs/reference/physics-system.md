@@ -46,7 +46,7 @@ is no default constructor — a gravity value is always required.
 ```cpp
 Engine::PhysicsSystem physics(10.0f); // gravity = 10 units/s²
 
-Engine::Entity ball({ 0.0f, 0.0f }, { 10.0f, 10.0f }, { 255, 255, 255, 255 });
+Engine::GameObject ball({ 0.0f, 0.0f }, { 10.0f, 10.0f }, { 255, 255, 255, 255 });
 physics.Update(ball, 0.5f);
 // ball.GetVelocity().Y == 5.0f   (0 + 10 * 0.5)
 // ball.GetPosition().Y == 2.5f  (0 + 5.0 * 0.5, using the updated velocity)
@@ -56,5 +56,5 @@ physics.Update(ball, 0.5f);
 
 - [System: Physics](../systems/physics.md)
 - [Guide: Configure Gravity](../guides/configure-gravity.md)
-- [Reference: Entity](entity.md)
+- [Reference: GameObject](entity.md)
 - [System: Collision](../systems/collision.md)

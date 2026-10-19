@@ -9,16 +9,20 @@ add_executable(CoreTests ExampleTest.cpp)
 target_link_libraries(CoreTests PRIVATE Engine)
 add_test(NAME CoreTests COMMAND CoreTests)
 
-add_executable(EntityTests EntityTest.cpp)
-target_link_libraries(EntityTests PRIVATE Engine)
-add_test(NAME EntityTests COMMAND EntityTests)
+add_executable(GameObjectTests GameObjectTest.cpp)
+target_link_libraries(GameObjectTests PRIVATE EngineCore)
+add_test(NAME GameObjectTests COMMAND GameObjectTests)
+
+add_executable(GameObjectRegistryTests GameObjectRegistryTest.cpp)
+target_link_libraries(GameObjectRegistryTests PRIVATE EngineCore)
+add_test(NAME GameObjectRegistryTests COMMAND GameObjectRegistryTests)
 
 add_executable(PhysicsSystemTests PhysicsSystemTest.cpp)
-target_link_libraries(PhysicsSystemTests PRIVATE Engine)
+target_link_libraries(PhysicsSystemTests PRIVATE EngineCore)
 add_test(NAME PhysicsSystemTests COMMAND PhysicsSystemTests)
 
 add_executable(CollisionTests CollisionTest.cpp)
-target_link_libraries(CollisionTests PRIVATE Engine)
+target_link_libraries(CollisionTests PRIVATE EngineCore)
 add_test(NAME CollisionTests COMMAND CollisionTests)
 
 add_executable(ScalingTests ScalingTest.cpp)

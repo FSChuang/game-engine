@@ -18,13 +18,14 @@ nav:
       - Application Loop: concepts/application-loop.md
       - Logical Time: concepts/logical-time.md
       - Rendering & Scaling: concepts/rendering-and-scaling.md
-      - Entity Model: concepts/entity-model.md
+      - GameObject Model: concepts/gameobject-model.md
       - Input State: concepts/input-state.md
       - Networking Model: concepts/networking-model.md
   - Systems:
       - Application: systems/application.md
       - Renderer: systems/renderer.md
-      - Entity: systems/entity.md
+      - GameObject: systems/gameobject.md
+      - GameObjectRegistry: systems/gameobjectregistry.md
       - Physics: systems/physics.md
       - Input: systems/input.md
       - Collision: systems/collision.md
@@ -42,7 +43,8 @@ nav:
   - API Reference:
       - Application: reference/application.md
       - Renderer: reference/renderer.md
-      - Entity: reference/entity.md
+      - GameObject: reference/gameobject.md
+      - GameObjectRegistry: reference/gameobjectregistry.md
       - PhysicsSystem: reference/physics-system.md
       - InputManager: reference/input-manager.md
       - Collision: reference/collision.md

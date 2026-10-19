@@ -390,12 +390,28 @@ def generate_socket_fragment():
     write_fragment("socket-api.md", lines)
 
 
-def generate_entity_fragment():
+def generate_gameobject_fragment():
+    """Milestone 3: GameObject.h contributes a struct (Color), a type alias
+    (ObjectId), an enum (ObjectType), and the GameObject class itself --
+    selected by source header like generate_protocol_fragment, not hardcoded
+    by name."""
+    ns_compound = load_compound("Engine", "namespace").find("compounddef")
+    header = "GameObject/GameObject.h"
     lines = []
-    emit_struct_section(lines, load_compound("Engine::Color", "struct"))
-    compound = load_compound("Engine::Entity", "class").find("compounddef")
-    emit_class_members(lines, compound, "Entity")
-    write_fragment("entity-api.md", lines)
+
+    for struct_root in structs_from_header(ns_compound, header):
+        emit_struct_section(lines, struct_root)
+
+    for memberdef in namespace_members_from_header(ns_compound, "typedef", header):
+        emit_member_section(lines, memberdef.findtext("name"), memberdef)
+
+    for memberdef in namespace_members_from_header(ns_compound, "enum", header):
+        emit_enum_section(lines, memberdef.findtext("name"), memberdef)
+
+    compound = load_compound("Engine::GameObject", "class").find("compounddef")
+    emit_class_members(lines, compound, "GameObject")
+
+    write_fragment("gameobject-api.md", lines)
 
 
 def generate_protocol_fragment():
@@ -441,7 +457,8 @@ def main():
 
     # Documentation Phase 5: remaining public Engine API.
     generate_simple_class_fragment("Engine::Application", "application-api.md")
-    generate_entity_fragment()
+    generate_gameobject_fragment()
+    generate_simple_class_fragment("Engine::GameObjectRegistry", "gameobjectregistry-api.md")
     generate_simple_class_fragment("Engine::PhysicsSystem", "physics-system-api.md")
     generate_simple_class_fragment("Engine::InputManager", "input-manager-api.md")
     generate_free_functions_fragment("Collision/Collision.h", "collision-api.md")

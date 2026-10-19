@@ -1,6 +1,6 @@
 #include "Engine/Renderer/Renderer.h"
 
-#include "Engine/Entity/Entity.h"
+#include "Engine/GameObject/GameObject.h"
 
 #include <SDL3/SDL.h>
 
@@ -80,12 +80,18 @@ namespace Engine
 		SDL_RenderPresent(m_Renderer);
 	}
 
-	void Renderer::DrawEntity(const Entity& entity)
+	void Renderer::DrawObject(const GameObject& gameObject)
 	{
+		if (!gameObject.HasRender())
+		{
+			return;
+		}
+
 		Vector2 currentResolution = GetWindowSize();
-		Vector2 position = ApplyScalingMode(entity.GetPosition(), m_ScalingMode, m_ReferenceResolution, currentResolution);
-		Vector2 size = ApplyScalingMode(entity.GetSize(), m_ScalingMode, m_ReferenceResolution, currentResolution);
-		Color color = entity.GetColor();
+		Vector2 position =
+		    ApplyScalingMode(gameObject.GetPosition(), m_ScalingMode, m_ReferenceResolution, currentResolution);
+		Vector2 size = ApplyScalingMode(gameObject.GetSize(), m_ScalingMode, m_ReferenceResolution, currentResolution);
+		Color color = gameObject.GetColor();
 
 		SDL_SetRenderDrawColor(m_Renderer, color.R, color.G, color.B, color.A);
 

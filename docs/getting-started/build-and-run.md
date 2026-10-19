@@ -22,6 +22,7 @@ This is the exact sequence `.github/workflows/ci.yml` runs on every push.
 
 | Target | Kind | Always built? |
 |---|---|---|
+| `EngineCore` | Static library | Yes |
 | `Engine` | Static library | Yes |
 | `EngineNetworkCore` | Static library | Yes |
 | `EngineNetwork` | Static library | Only if cppzmq is found (see [Installation](installation.md)) |
@@ -31,7 +32,8 @@ This is the exact sequence `.github/workflows/ci.yml` runs on every push.
 
 `ctest` currently runs these registered suites:
 
-- `CoreTests`, `EntityTests`, `PhysicsSystemTests`, `CollisionTests`, `ScalingTests`, `TimelineTests` — link only `Engine`
+- `CoreTests`, `ScalingTests`, `TimelineTests` — link only `Engine`
+- `GameObjectTests`, `GameObjectRegistryTests`, `PhysicsSystemTests`, `CollisionTests` — link only `EngineCore` (no SDL required)
 - `NetworkProtocolTests`, `PlayerRegistryTests`, `ServerDispatchTests` — link only `EngineNetworkCore` (build regardless of ZeroMQ availability)
 - `SocketPubSubTests` — links `EngineNetwork`; only built (and only registered with CTest) when `EngineNetwork` exists
 

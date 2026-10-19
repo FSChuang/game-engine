@@ -31,25 +31,25 @@ resolution after construction.
 
 - **Scaling math** — see [Rendering & Scaling](../concepts/rendering-and-scaling.md)
   for the exact formula and worked examples. `ApplyScalingMode` is applied
-  independently to both position and size by `DrawEntity`, and does not read
-  or modify any `Entity`/`Renderer` state itself.
+  independently to both position and size by `DrawObject`, and does not read
+  or modify any `GameObject`/`Renderer` state itself.
 - **Construction** creates the window and renderer together via
   `SDL_CreateWindowAndRenderer`; if creation fails, whichever handle *did*
   succeed is destroyed before the exception is thrown — construction never
   leaves a partial resource behind.
-- **Frame order** — call `BeginFrame`, then any number of `DrawEntity` calls,
+- **Frame order** — call `BeginFrame`, then any number of `DrawObject` calls,
   then `EndFrame` — exactly the order `Application::Run` already uses around
   your render callback.
-- **`DrawEntity` reads live state** — the window's *current* size is read
+- **`DrawObject` reads live state** — the window's *current* size is read
   fresh on every call (`SDL_GetWindowSize`), never cached, so a scaling-mode
-  change takes effect on the very next `DrawEntity` call; nothing already
+  change takes effect on the very next `DrawObject` call; nothing already
   drawn is retroactively affected.
 
 ## Ownership and resource notes
 
 `Renderer` owns its `SDL_Window*`/`SDL_Renderer*` for its entire lifetime and
-exposes neither to callers. It holds no reference to any `Entity` — every
-`DrawEntity` call reads its argument once and stores nothing.
+exposes neither to callers. It holds no reference to any `GameObject` — every
+`DrawObject` call reads its argument once and stores nothing.
 
 ## Minimal example
 
@@ -61,8 +61,8 @@ application.Run(
     },
     [](Engine::Renderer& renderer)
     {
-        renderer.DrawEntity(player);
-        renderer.DrawEntity(wall);
+        renderer.DrawObject(player);
+        renderer.DrawObject(wall);
     });
 ```
 
@@ -71,4 +71,4 @@ application.Run(
 - [System: Renderer](../systems/renderer.md)
 - [Concept: Rendering & Scaling](../concepts/rendering-and-scaling.md)
 - [Guide: Toggle Scaling Mode](../guides/toggle-scaling-mode.md)
-- [Reference: Entity](entity.md)
+- [Reference: GameObject](entity.md)

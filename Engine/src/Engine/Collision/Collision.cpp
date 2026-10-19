@@ -1,10 +1,10 @@
 #include "Engine/Collision/Collision.h"
 
-#include "Engine/Entity/Entity.h"
+#include "Engine/GameObject/GameObject.h"
 
 namespace Engine
 {
-	bool IsColliding(const Entity& a, const Entity& b)
+	bool IsColliding(const GameObject& a, const GameObject& b)
 	{
 		Vector2 aPosition = a.GetPosition();
 		Vector2 aSize = a.GetSize();
