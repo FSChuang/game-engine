@@ -298,7 +298,9 @@ int main()
 	{
 		std::vector<std::uint8_t> malformed =
 		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, { MakePeer(1, 6001) } });
-		std::size_t peerCountIndex = malformed.size() - 1 - 6; // 6 bytes of the one PeerInfo, count byte just before
+		// From the end: 16 bytes of the trailing Platform2, 6 bytes of the one PeerInfo,
+		// count byte just before those.
+		std::size_t peerCountIndex = malformed.size() - 1 - 6 - 16;
 		malformed[peerCountIndex] = static_cast<std::uint8_t>(Engine::MaxPlayers + 1);
 		Check(!Engine::DecodeSnapshot(malformed).has_value(), "DecodeSnapshot_PeerCountExceedsMaxPlayers_Rejected");
 	}
@@ -342,13 +344,64 @@ int main()
 		Check(!Engine::DecodeSnapshot(*encoded).has_value(), "DecodeSnapshot_Truncated_Rejected");
 	}
 
-	// Truncated SNAPSHOT: cut short inside the PlatformState fields themselves (before
-	// the roster-count byte is even reached), distinct from truncating inside the roster.
+	// Truncated SNAPSHOT: cut short inside the trailing Platform2 fields themselves (the
+	// last bytes of the frame), distinct from truncating inside the roster or peers.
 	{
 		Engine::Snapshot snapshot{ 1, MakePlatform(1.0f, 2.0f, 3.0f, 4.0f), {} };
 		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
-		encoded->resize(encoded->size() - 3); // chop into the middle of the last platform float
+		encoded->resize(encoded->size() - 3); // chop into the middle of Platform2's last float
 		Check(!Engine::DecodeSnapshot(*encoded).has_value(), "DecodeSnapshot_TruncatedPlatformState_Rejected");
+	}
+
+	// --- Milestone 3: Platform2, the second server-authoritative moving platform ---
+
+	// SNAPSHOT round-trip preserves a nontrivial Platform2 distinctly from Platform.
+	{
+		Engine::Snapshot snapshot{ 3, MakePlatform(10.0f, 20.0f, 1.0f, 0.0f), {}, {},
+			                        MakePlatform(500.0f, -75.5f, 0.0f, -40.0f) };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		std::optional<Engine::Snapshot> decoded = encoded.has_value() ? Engine::DecodeSnapshot(*encoded)
+		                                                               : std::nullopt;
+
+		Check(decoded.has_value() && PlatformsEqual(decoded->Platform, snapshot.Platform),
+		      "Snapshot_RoundTrip_Platform2_DoesNotDisturbPlatform");
+		Check(decoded.has_value() && PlatformsEqual(decoded->Platform2, snapshot.Platform2),
+		      "Snapshot_RoundTrip_Platform2_PreservedExactly");
+		Check(decoded.has_value() && !PlatformsEqual(decoded->Platform, decoded->Platform2),
+		      "Snapshot_RoundTrip_Platform2_IsIndependentOfPlatform");
+	}
+
+	// A Snapshot built without naming Platform2 (every pre-Milestone-3 call site) still
+	// decodes with the documented neutral all-zero default — never garbage, never a copy
+	// of Platform.
+	{
+		Engine::Snapshot snapshot{ 1, MakePlatform(123.0f, 456.0f, 7.0f, 8.0f), {} };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		std::optional<Engine::Snapshot> decoded = encoded.has_value() ? Engine::DecodeSnapshot(*encoded)
+		                                                               : std::nullopt;
+
+		Check(decoded.has_value() && PlatformsEqual(decoded->Platform2, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f)),
+		      "Snapshot_OmittedPlatform2_DefaultsToNeutralZeroState");
+	}
+
+	// Truncated SNAPSHOT: peer directory complete, but the frame is cut short inside
+	// Platform2's bytes specifically (as opposed to the generic "chop 3 bytes off the
+	// end" case above, this one still has a nonempty peer list ahead of Platform2).
+	{
+		Engine::Snapshot snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, { MakePeer(1, 6001) },
+			                        MakePlatform(1.0f, 2.0f, 3.0f, 4.0f) };
+		std::optional<std::vector<std::uint8_t>> encoded = Engine::EncodeSnapshot(snapshot);
+		encoded->resize(encoded->size() - 5); // chop into the middle of Platform2
+		Check(!Engine::DecodeSnapshot(*encoded).has_value(), "DecodeSnapshot_TruncatedPlatform2_Rejected");
+	}
+
+	// Extra trailing byte after a well-formed Platform2 is rejected, exactly like every
+	// other trailing-byte case.
+	{
+		std::vector<std::uint8_t> plusExtra = *Engine::EncodeSnapshot(
+		    Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, {}, MakePlatform(1.0f, 2.0f, 3.0f, 4.0f) });
+		plusExtra.push_back(0xFF);
+		Check(!Engine::DecodeSnapshot(plusExtra).has_value(), "DecodeSnapshot_ExtraTrailingByteAfterPlatform2_Rejected");
 	}
 
 	// Unknown/wrong message type is rejected by every decoder, even at a size that
@@ -373,7 +426,9 @@ int main()
 	{
 		std::vector<std::uint8_t> malformed =
 		    *Engine::EncodeSnapshot(Engine::Snapshot{ 1, MakePlatform(0.0f, 0.0f, 0.0f, 0.0f), {}, {} });
-		std::size_t rosterCountIndex = malformed.size() - 2;
+		// From the end: 16 bytes of the trailing Platform2, then [rosterCountByte=0]
+		// [peerCountByte=0] — roster count is 2 bytes before the end of what's left.
+		std::size_t rosterCountIndex = malformed.size() - 2 - 16;
 		malformed[rosterCountIndex] = static_cast<std::uint8_t>(Engine::MaxPlayers + 1);
 		Check(!Engine::DecodeSnapshot(malformed).has_value(), "DecodeSnapshot_RosterCountExceedsMaxPlayers_Rejected");
 	}

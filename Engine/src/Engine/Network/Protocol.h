@@ -104,12 +104,22 @@ namespace Engine
 	/// server -> client: the recipient's own ID, the shared platform's current state,
 	/// every currently active player (`Roster`, unspecified order), and the peer
 	/// directory needed to reach each of them directly (`Peers`, unspecified order).
+	///
+	/// `Platform2` (Milestone 3) is a second independent server-authoritative moving
+	/// object, named explicitly rather than generalized into an array — this assignment
+	/// has exactly two, not an arbitrary count (ENGINEERING_SPEC.md §1: no speculative
+	/// generality). Appended as the struct's last field, and encoded/decoded at the very
+	/// end of the wire format, specifically so every existing 3-or-4-argument
+	/// `Snapshot{...}` aggregate-initialization call site continues to compile unchanged
+	/// and simply defaults it to the same neutral `PlatformState{0,0,0,0}` placeholder
+	/// `Platform` already used before any real value is known.
 	struct Snapshot
 	{
 		PlayerId RecipientId;
 		PlatformState Platform;
 		std::vector<PlayerState> Roster;
 		std::vector<PeerInfo> Peers;
+		PlatformState Platform2{};
 	};
 
 	/// server -> client: a Snapshot could not be produced; see ErrorCode. Not used to

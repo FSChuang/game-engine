@@ -207,7 +207,7 @@ namespace Engine
 
 		std::vector<std::uint8_t> bytes;
 		bytes.reserve(SnapshotHeaderSize + PlayerStateWireSize * snapshot.Roster.size() + PeerCountSize +
-		              PeerInfoWireSize * snapshot.Peers.size());
+		              PeerInfoWireSize * snapshot.Peers.size() + PlatformStateWireSize);
 		AppendUint8(bytes, static_cast<std::uint8_t>(MessageType::Snapshot));
 		AppendUint32(bytes, snapshot.RecipientId);
 		AppendPlatformState(bytes, snapshot.Platform);
@@ -221,6 +221,9 @@ namespace Engine
 		{
 			AppendPeerInfo(bytes, peer);
 		}
+		// Milestone 3: the second platform is appended last, after everything that
+		// already existed, so the rest of the wire format is untouched.
+		AppendPlatformState(bytes, snapshot.Platform2);
 		return bytes;
 	}
 
@@ -352,7 +355,10 @@ namespace Engine
 			return std::nullopt;
 		}
 
-		std::size_t expectedSize = peerCountOffset + PeerCountSize + PeerInfoWireSize * peerCount;
+		// Milestone 3: the second platform's fixed-size bytes sit right after the peer
+		// directory, at the very end of the frame.
+		std::size_t platform2Offset = peerCountOffset + PeerCountSize + PeerInfoWireSize * peerCount;
+		std::size_t expectedSize = platform2Offset + PlatformStateWireSize;
 		if (bytes.size() != expectedSize)
 		{
 			return std::nullopt;
@@ -386,7 +392,13 @@ namespace Engine
 			offset += PeerInfoWireSize;
 		}
 
-		return Snapshot{ recipientId, platform, std::move(roster), std::move(peers) };
+		PlatformState platform2;
+		if (!ReadPlatformState(bytes, platform2Offset, platform2))
+		{
+			return std::nullopt;
+		}
+
+		return Snapshot{ recipientId, platform, std::move(roster), std::move(peers), platform2 };
 	}
 
 	std::vector<std::uint8_t> EncodeError(ErrorCode code)
