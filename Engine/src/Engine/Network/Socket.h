@@ -71,6 +71,17 @@ namespace Engine
 		/// least once.
 		void Subscribe(const std::string& topic);
 
+		/// Sets both the send and receive high-water-mark (ZMQ_SNDHWM/ZMQ_RCVHWM): the
+		/// number of outstanding messages ZeroMQ queues for this socket before silently
+		/// dropping further ones (PUB) or blocking (most other roles). cppzmq's own
+		/// default is 1000, which a sustained high-message-rate PUB/SUB exchange can
+		/// exceed and silently lose messages past, well before any genuine network
+		/// failure. Call this before Bind()/Connect() to raise it for that case; the
+		/// default remains fine for this project's normal gameplay traffic (well under
+		/// 1000 outstanding messages at any Timeline scale), so existing callers that
+		/// never call this are unaffected.
+		void SetHighWaterMark(int highWaterMark);
+
 		/// Sends `message` as a single ZeroMQ frame. Valid for Request/Reply (as part of
 		/// their alternating discipline) and for Publish (fire-and-forget broadcast to
 		/// every currently-connected subscriber).

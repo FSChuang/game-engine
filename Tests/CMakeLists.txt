@@ -47,6 +47,11 @@ add_executable(ServerDispatchTests ServerDispatchTest.cpp)
 target_link_libraries(ServerDispatchTests PRIVATE EngineNetworkCore)
 add_test(NAME ServerDispatchTests COMMAND ServerDispatchTests)
 
+# CSC 581 performance checkpoint: generic Full/Delta object-state exchange wire format.
+add_executable(ExchangeProtocolTests ExchangeProtocolTest.cpp)
+target_link_libraries(ExchangeProtocolTests PRIVATE EngineNetworkCore)
+add_test(NAME ExchangeProtocolTests COMMAND ExchangeProtocolTests)
+
 # Headless smoke executables proving Engine::Socket's REQ/REP halves work end to
 # end (Milestone 2 Section 2). Manually run, not CTest-registered (see
 # NetworkSmoke/SmokeServer.cpp / SmokeClient.cpp for why). Built only when

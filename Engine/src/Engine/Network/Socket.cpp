@@ -59,6 +59,12 @@ namespace Engine
 		m_Socket.set(zmq::sockopt::subscribe, topic);
 	}
 
+	void Socket::SetHighWaterMark(int highWaterMark)
+	{
+		m_Socket.set(zmq::sockopt::sndhwm, highWaterMark);
+		m_Socket.set(zmq::sockopt::rcvhwm, highWaterMark);
+	}
+
 	void Socket::Send(const std::string& message)
 	{
 		m_Socket.send(zmq::buffer(message), zmq::send_flags::none);

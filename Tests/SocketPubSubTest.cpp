@@ -85,6 +85,106 @@ int main()
 		Check(elapsed < std::chrono::milliseconds(50), "PubSub_TryReceive_NoMessageAvailable_ReturnsPromptly");
 	}
 
+	// C. SetHighWaterMark: a burst of messages sent faster than the subscriber drains
+	// them, with the DEFAULT high-water-mark (1000), loses some once the queue fills —
+	// demonstrating the real problem a high-rate PUB/SUB exchange (e.g. the CSC 581
+	// performance benchmark) hits without this. Raising the high-water-mark past the
+	// burst size on BOTH ends (set before Bind()/Connect(), matching the documented
+	// contract) delivers every message instead.
+	{
+		constexpr const char* DefaultHwmEndpoint = "tcp://127.0.0.1:5572";
+		constexpr const char* RaisedHwmEndpoint = "tcp://127.0.0.1:5573";
+		constexpr int BurstSize = 5000; // well above the library default of 1000
+
+		// Keeps draining until `targetCount` matching ("MSG") messages are seen or
+		// `timeoutMs` elapses, rather than a single fixed sleep-then-drain —
+		// merely-delayed-but-not-dropped messages (the raised-high-water-mark case) still
+		// need time to actually arrive over the loopback connection; a dropped message
+		// (the default case) never arrives no matter how long this waits, so the count
+		// simply plateaus below target instead. Filters by exact content (only "MSG"
+		// counts) rather than assuming every stray leftover "WARMUP" from the handshake
+		// above has already arrived by the time draining starts — a straggler warmup
+		// message arriving mid-burst would otherwise inflate the count by one.
+		auto drainWithRetry = [](Engine::Socket& sub, int targetCount, int timeoutMs) -> int
+		{
+			int count = 0;
+			int elapsedMs = 0;
+			while (elapsedMs < timeoutMs)
+			{
+				std::optional<std::string> message;
+				while ((message = sub.TryReceive()).has_value())
+				{
+					if (*message == "MSG")
+					{
+						++count;
+					}
+				}
+				if (count >= targetCount)
+				{
+					break;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(RetryIntervalMs));
+				elapsedMs += RetryIntervalMs;
+			}
+			return count;
+		};
+
+		Engine::Socket defaultPub(Engine::SocketRole::Publish);
+		defaultPub.Bind(DefaultHwmEndpoint);
+		Engine::Socket defaultSub(Engine::SocketRole::Subscribe);
+		defaultSub.Connect(DefaultHwmEndpoint);
+		defaultSub.Subscribe("");
+
+		// Slow-joiner settle, same bounded-retry idea as test A, but here we need the
+		// subscription fully established BEFORE the burst (a message lost to slow-joiner
+		// would be indistinguishable from one lost to the high-water-mark).
+		std::optional<std::string> warmup;
+		for (int attempt = 0; attempt < MaxAttempts && !warmup.has_value(); ++attempt)
+		{
+			defaultPub.Send("WARMUP");
+			warmup = defaultSub.TryReceive();
+			if (!warmup.has_value())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(RetryIntervalMs));
+			}
+		}
+
+		for (int i = 0; i < BurstSize; ++i)
+		{
+			defaultPub.Send("MSG");
+		}
+		int defaultReceivedCount = drainWithRetry(defaultSub, BurstSize, 500);
+		Check(defaultReceivedCount < BurstSize,
+		      "DefaultHighWaterMark_BurstFasterThanDrain_LosesSomeMessages");
+
+		Engine::Socket raisedPub(Engine::SocketRole::Publish);
+		raisedPub.SetHighWaterMark(BurstSize * 2);
+		raisedPub.Bind(RaisedHwmEndpoint);
+		Engine::Socket raisedSub(Engine::SocketRole::Subscribe);
+		raisedSub.SetHighWaterMark(BurstSize * 2);
+		raisedSub.Connect(RaisedHwmEndpoint);
+		raisedSub.Subscribe("");
+
+		std::optional<std::string> raisedWarmup;
+		for (int attempt = 0; attempt < MaxAttempts && !raisedWarmup.has_value(); ++attempt)
+		{
+			raisedPub.Send("WARMUP");
+			raisedWarmup = raisedSub.TryReceive();
+			if (!raisedWarmup.has_value())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(RetryIntervalMs));
+			}
+		}
+
+		for (int i = 0; i < BurstSize; ++i)
+		{
+			raisedPub.Send("MSG");
+		}
+		int raisedReceivedCount = drainWithRetry(raisedSub, BurstSize, 3000);
+		Check(raisedReceivedCount == BurstSize,
+		      "RaisedHighWaterMark_SameBurst_DeliversEveryMessage");
+	}
+
 	// D. Disconnect is valid and leaves the Socket in a usable state. Deliberately not
 	// asserting anything about message delivery around the disconnect itself (that
 	// would be a flaky, timing-dependent assertion) — only that the call succeeds
