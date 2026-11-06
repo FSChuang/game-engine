@@ -4,15 +4,17 @@
 
 namespace Engine
 {
+	void InputManager::ProcessEvent(const SDL_Event& event)
+	{
+		if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat)
+		{
+			m_JustPressedThisFrame[event.key.scancode] = true;
+		}
+	}
+
 	void InputManager::Update()
 	{
-		int keyCount = 0;
-		const bool* keyboardState = SDL_GetKeyboardState(&keyCount);
-
-		for (int i = 0; i < keyCount; ++i)
-		{
-			m_PreviousKeyState[i] = keyboardState[i];
-		}
+		m_JustPressedThisFrame.fill(false);
 	}
 
 	bool InputManager::IsKeyPressed(SDL_Scancode key) const
@@ -23,6 +25,6 @@ namespace Engine
 
 	bool InputManager::IsKeyJustPressed(SDL_Scancode key) const
 	{
-		return IsKeyPressed(key) && !m_PreviousKeyState[key];
+		return m_JustPressedThisFrame[key];
 	}
 }

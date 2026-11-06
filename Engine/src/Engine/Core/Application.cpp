@@ -118,6 +118,11 @@ namespace Engine
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
+			// Must see every event, even ones it ignores — see InputManager::ProcessEvent's
+			// own comment for why a key-down event, not a polled snapshot, is what makes
+			// IsKeyJustPressed() reliable regardless of how long a frame takes.
+			m_Input.ProcessEvent(event);
+
 			if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
 			{
 				m_IsRunning = false;

@@ -33,6 +33,13 @@ add_executable(TimelineTests TimelineTest.cpp)
 target_link_libraries(TimelineTests PRIVATE Engine)
 add_test(NAME TimelineTests COMMAND TimelineTests)
 
+# Bugfix checkpoint: InputManager's "just pressed" edge detection, event-driven rather
+# than polled-snapshot-based. Pure logic — constructs synthetic SDL_Event structs
+# directly, never touches live SDL state, so no SDL_Init() is needed.
+add_executable(InputManagerTests InputManagerTest.cpp)
+target_link_libraries(InputManagerTests PRIVATE Engine)
+add_test(NAME InputManagerTests COMMAND InputManagerTests)
+
 # Pure protocol/registry logic (Milestone 2 Section 2): no ZeroMQ dependency, so
 # these always build and run regardless of whether cppzmq was found.
 add_executable(NetworkProtocolTests NetworkProtocolTest.cpp)
