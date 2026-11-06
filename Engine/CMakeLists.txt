@@ -49,6 +49,7 @@ add_library(EngineNetworkCore STATIC
     src/Engine/Network/PlayerRegistry.cpp
     src/Engine/Network/ServerDispatch.cpp
     src/Engine/Network/ExchangeProtocol.cpp
+    src/Engine/Network/EventProtocol.cpp
 )
 target_include_directories(EngineNetworkCore PUBLIC src)
 target_compile_features(EngineNetworkCore PUBLIC cxx_std_17)
