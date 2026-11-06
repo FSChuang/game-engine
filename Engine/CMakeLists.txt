@@ -6,7 +6,9 @@
 find_package(SDL3 REQUIRED)
 
 # Pure C++ engine logic with no SDL (or any other platform/transport) dependency: the
-# runtime object model (Milestone 3) plus the two systems that only ever operate on it.
+# runtime object model (Milestone 3), the two systems that only ever operate on it, and the
+# Milestone 4 event system (EventManager takes its clock as an injected callable, so it needs
+# neither SDL nor Timeline).
 # Kept as its own target, separate from the SDL-backed Engine target below, specifically
 # so a headless process (e.g. a dedicated multiplayer server) can use GameObject/Physics/
 # Collision without being forced to link SDL3 at all — mirrors EngineNetworkCore's own
@@ -16,6 +18,7 @@ add_library(EngineCore STATIC
     src/Engine/GameObject/GameObjectRegistry.cpp
     src/Engine/Collision/Collision.cpp
     src/Engine/Physics/PhysicsSystem.cpp
+    src/Engine/Event/EventManager.cpp
 )
 target_include_directories(EngineCore PUBLIC src)
 target_compile_features(EngineCore PUBLIC cxx_std_17)

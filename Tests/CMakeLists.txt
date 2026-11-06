@@ -25,6 +25,12 @@ add_executable(CollisionTests CollisionTest.cpp)
 target_link_libraries(CollisionTests PRIVATE EngineCore)
 add_test(NAME CollisionTests COMMAND CollisionTests)
 
+# Milestone 4 Checkpoint 1: EventManager ordering/dispatch/subscription logic. Links EngineCore
+# only (no SDL, no Timeline): time is a fake clock, so every case is deterministic.
+add_executable(EventManagerTests EventManagerTest.cpp)
+target_link_libraries(EventManagerTests PRIVATE EngineCore)
+add_test(NAME EventManagerTests COMMAND EventManagerTests)
+
 add_executable(ScalingTests ScalingTest.cpp)
 target_link_libraries(ScalingTests PRIVATE Engine)
 add_test(NAME ScalingTests COMMAND ScalingTests)
