@@ -30,7 +30,12 @@ namespace Engine
 		Collision = 0,
 		Death,
 		Spawn,
-		Input
+		Input,
+		// Replay control (Milestone 4). Ordinary events like any other: raising one only
+		// queues it, and ReplayRecorder reacts when it is dispatched.
+		ReplayStart,
+		ReplayStop,
+		ReplayPlay
 	};
 
 	/// Dispatch priority. Only ever breaks a tie between events with the SAME timestamp (see
@@ -86,9 +91,25 @@ namespace Engine
 		bool Pressed;
 	};
 
+	/// Replay control payloads (no data needed: the event type IS the command).
+	/// ReplayStart: begin a fresh recording. ReplayStop: end the recording in progress.
+	/// ReplayPlay: play the completed recording back. See ReplayRecorder for exact semantics.
+	struct ReplayStartEventData
+	{
+	};
+
+	struct ReplayStopEventData
+	{
+	};
+
+	struct ReplayPlayEventData
+	{
+	};
+
 	/// The closed set of event payloads. Alternative order MUST match EventType's values;
 	/// the static_asserts below enforce it.
-	using EventPayload = std::variant<CollisionEventData, DeathEventData, SpawnEventData, InputEventData>;
+	using EventPayload = std::variant<CollisionEventData, DeathEventData, SpawnEventData, InputEventData,
+	                                  ReplayStartEventData, ReplayStopEventData, ReplayPlayEventData>;
 
 	static_assert(std::is_same_v<std::variant_alternative_t<static_cast<std::size_t>(EventType::Collision), EventPayload>,
 	                             CollisionEventData>,
@@ -101,6 +122,16 @@ namespace Engine
 	              "EventPayload alternative order must match EventType");
 	static_assert(std::is_same_v<std::variant_alternative_t<static_cast<std::size_t>(EventType::Input), EventPayload>,
 	                             InputEventData>,
+	              "EventPayload alternative order must match EventType");
+
+	static_assert(std::is_same_v<std::variant_alternative_t<static_cast<std::size_t>(EventType::ReplayStart), EventPayload>,
+	                             ReplayStartEventData>,
+	              "EventPayload alternative order must match EventType");
+	static_assert(std::is_same_v<std::variant_alternative_t<static_cast<std::size_t>(EventType::ReplayStop), EventPayload>,
+	                             ReplayStopEventData>,
+	              "EventPayload alternative order must match EventType");
+	static_assert(std::is_same_v<std::variant_alternative_t<static_cast<std::size_t>(EventType::ReplayPlay), EventPayload>,
+	                             ReplayPlayEventData>,
 	              "EventPayload alternative order must match EventType");
 
 	/// Number of distinct EventType values.

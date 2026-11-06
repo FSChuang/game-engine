@@ -31,6 +31,12 @@ add_executable(EventManagerTests EventManagerTest.cpp)
 target_link_libraries(EventManagerTests PRIVATE EngineCore)
 add_test(NAME EventManagerTests COMMAND EventManagerTests)
 
+# Milestone 4 Checkpoint 4: event-driven replay core (control events, recording, playback
+# scheduling). EngineCore only, fake clock.
+add_executable(ReplayRecorderTests ReplayRecorderTest.cpp)
+target_link_libraries(ReplayRecorderTests PRIVATE EngineCore)
+add_test(NAME ReplayRecorderTests COMMAND ReplayRecorderTests)
+
 add_executable(ScalingTests ScalingTest.cpp)
 target_link_libraries(ScalingTests PRIVATE Engine)
 add_test(NAME ScalingTests COMMAND ScalingTests)

@@ -19,6 +19,7 @@ add_library(EngineCore STATIC
     src/Engine/Collision/Collision.cpp
     src/Engine/Physics/PhysicsSystem.cpp
     src/Engine/Event/EventManager.cpp
+    src/Engine/Event/ReplayRecorder.cpp
 )
 target_include_directories(EngineCore PUBLIC src)
 target_compile_features(EngineCore PUBLIC cxx_std_17)
