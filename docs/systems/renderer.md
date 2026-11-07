@@ -1,7 +1,7 @@
 # Renderer
 
 `Renderer` owns the SDL window and rendering surface and draws `GameObject`
-objects as filled, scaled rectangles. It is the one object a game uses to get
+objects as filled, scaled rectangles, plus PNG sprites it loads and owns. It is the one object a game uses to get
 pixels on screen — everything about *what* to draw is the game's decision,
 made once per frame from inside the render callback `Application::Run` hands
 it.
@@ -22,27 +22,40 @@ coordinates track the window size or ignore it entirely.
   constructed with, captured once and never updated afterward, even though
   the window itself can be resized.
 - Its current `ScalingMode` (`Constant` by default).
+- Its clear color (blue by default; `SetClearColor` changes it).
+- Every texture loaded through `LoadTexture`. The game only ever holds an opaque
+  `TextureId`; the textures are destroyed in `~Renderer` before the SDL renderer
+  they belong to.
 
 ## What it does NOT own
 
 - **No `GameObject` storage.** `DrawObject` takes a `const GameObject&` and reads it
   once; `Renderer` keeps no list of entities and draws nothing on its own
   initiative.
-- **No textures or images.** Every draw is `SDL_RenderFillRect` — a solid
-  color rectangle. There is no sprite/texture support yet (SDL3_image is not
-  integrated).
+- **No asset manager.** `LoadTexture` loads a PNG with SDL3's built-in
+  `SDL_LoadPNG` (no SDL3_image). Loading the same path twice makes two textures;
+  there is no cache, atlas or animation system.
 - **No input handling.** `Renderer` doesn't know a keyboard exists;
   `ToggleScalingMode`/`SetScalingMode` are pure mutators that something else
   — `Application`, or a game directly — decides when to call.
-- **No camera, viewport, or z-ordering.** Entities are drawn in whatever
-  order `DrawObject` is called, with no depth or culling.
+- **No camera, viewport, or z-ordering.** Entities and sprites are drawn in
+  whatever order `DrawObject`/`DrawSprite` are called (painter's order), with no
+  depth or culling.
 
 ## Public entry points
 
 ```cpp
 void BeginFrame();
 void EndFrame();
-void DrawObject(const GameObject& entity);
+void DrawObject(const GameObject& entity);   // honors the color's alpha
+
+void SetClearColor(Color color);
+Color GetClearColor() const;
+
+TextureId LoadTexture(const std::string& path);   // PNG; throws std::runtime_error
+void DrawSprite(TextureId texture, Vector2 position, Vector2 size,
+                float rotationRadians = 0.0f,
+                std::optional<SourceRect> source = std::nullopt);
 
 void SetScalingMode(ScalingMode mode);
 ScalingMode GetScalingMode() const;
@@ -55,6 +68,16 @@ are plain, independent state mutators — see
 [Rendering & Scaling](../concepts/rendering-and-scaling.md) for exactly how
 that state changes what `DrawObject` draws.
 
+## Sprites
+
+`DrawSprite` uses the same `position`/`size` convention and the same scaling
+modes as `DrawObject`. The angle is in **radians**, positive **clockwise on
+screen**, and the sprite rotates around the **center** of its destination box.
+`SourceRect` (in the texture's own pixels, never scaled) picks a sub-region, e.g.
+one frame of a sprite sheet. Textures are sampled nearest-neighbor so pixel art
+stays crisp. An id that did not come from this renderer's `LoadTexture` throws
+`std::invalid_argument`.
+
 ## Relationship to Application
 
 `Application` owns exactly one `Renderer` (`Scope<Renderer>`) for its entire
@@ -66,7 +89,8 @@ per-frame order this fits into.
 `Application` is also the source of the one built-in scaling-mode trigger:
 its `ProcessScalingModeToggle` calls `Renderer::ToggleScalingMode()` when
 **Tab** is just-pressed. A game can call `SetScalingMode`/`ToggleScalingMode`
-itself too, through the `Renderer&` its render callback receives — see the
+itself too, through the `Renderer&` its render callback receives (or
+`Application::GetRenderer()`, which a game uses at startup to `LoadTexture`) — see the
 [Toggle Scaling Mode guide](../guides/toggle-scaling-mode.md).
 
 ## What it does NOT do
@@ -82,7 +106,7 @@ reference resolution visibly stretches or squashes every entity. Nothing in
 
 <dl>
 <dt>Purpose</dt>
-<dd>Owns the SDL window/renderer and draws <code>GameObject</code> objects as filled, scaled rectangles.</dd>
+<dd>Owns the SDL window/renderer and draws <code>GameObject</code> objects as filled, scaled rectangles and loaded PNG sprites.</dd>
 
 <dt>Owner</dt>
 <dd><code>Application</code> owns one instance via <code>Scope&lt;Renderer&gt;</code>. Nothing requires that ownership — a caller can construct a <code>Renderer</code> standalone.</dd>
@@ -97,7 +121,7 @@ reference resolution visibly stretches or squashes every entity. Nothing in
 <dd>Neither copyable nor movable — copy is explicitly deleted, which also suppresses the implicit move.</dd>
 
 <dt>Stateful</dt>
-<dd>Yes — the SDL handles, the reference resolution captured at construction, and the current scaling mode.</dd>
+<dd>Yes — the SDL handles, the reference resolution captured at construction, the current scaling mode, the clear color, and the loaded textures.</dd>
 
 <dt>External Dependencies</dt>
 <dd>SDL3 (<code>SDL_CreateWindowAndRenderer</code>, <code>SDL_DestroyRenderer</code>/<code>Window</code>, and the per-frame draw calls).</dd>
@@ -106,10 +130,10 @@ reference resolution visibly stretches or squashes every entity. Nothing in
 <dd>RAII. The constructor creates the window and renderer together; if either call fails, whichever one succeeded is destroyed before <code>std::runtime_error</code> is thrown — construction never leaves a partial resource behind.</dd>
 
 <dt>Public Entry Points</dt>
-<dd><code>Renderer(const WindowConfig&)</code>, <code>BeginFrame</code>, <code>EndFrame</code>, <code>DrawObject</code>, <code>SetScalingMode</code>/<code>GetScalingMode</code>/<code>ToggleScalingMode</code>.</dd>
+<dd><code>Renderer(const WindowConfig&)</code>, <code>BeginFrame</code>, <code>EndFrame</code>, <code>DrawObject</code>, <code>SetClearColor</code>/<code>GetClearColor</code>, <code>LoadTexture</code>, <code>DrawSprite</code>, <code>SetScalingMode</code>/<code>GetScalingMode</code>/<code>ToggleScalingMode</code>.</dd>
 
 <dt>Known Limitations / Failure Modes</dt>
-<dd>Filled-rectangle rendering only — no textures/sprites. <code>Proportional</code> mode scales X/Y independently and can distort shape on a non-uniform resize. Throws <code>std::runtime_error</code> (from <code>SDL_GetError()</code>) if window/renderer creation fails.</dd>
+<dd>No sprite flip, layers, batching or animation. <code>LoadTexture</code> does not cache. <code>Proportional</code> mode scales X/Y independently and can distort shape on a non-uniform resize. Throws <code>std::runtime_error</code> (from <code>SDL_GetError()</code>) if window/renderer creation or <code>LoadTexture</code> fails; <code>DrawSprite</code> throws <code>std::invalid_argument</code> for an unknown <code>TextureId</code>.</dd>
 
 </dl>
 

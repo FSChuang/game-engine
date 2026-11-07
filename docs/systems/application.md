@@ -52,7 +52,7 @@ A game programmer touches `Application` in exactly two places: constructing
 it once at startup with a `WindowConfig`, and calling `Run()` with the two
 callbacks. Everything else — input queries, drawing, timeline control — goes
 through the objects `Run()` hands to those callbacks (`InputManager&`,
-`Renderer&`), or through `GetGameTimeline()` if a game needs to read or
+`Renderer&`), through `GetRenderer()` for startup work such as loading textures, or through `GetGameTimeline()` if a game needs to read or
 change the timeline's scale/pause state itself (see the
 [Pause & Slow Motion guide](../guides/pause-and-slow-motion.md)).
 

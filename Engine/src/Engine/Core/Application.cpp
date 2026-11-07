@@ -130,6 +130,11 @@ namespace Engine
 		}
 	}
 
+	Renderer& Application::GetRenderer()
+	{
+		return *m_Renderer;
+	}
+
 	Timeline& Application::GetGameTimeline()
 	{
 		return *m_GameTimeline;

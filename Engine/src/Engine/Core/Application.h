@@ -35,6 +35,10 @@ namespace Engine
 		/// onRender once per frame with the renderer, between BeginFrame()/EndFrame().
 		void Run(const UpdateCallback& onUpdate, const RenderCallback& onRender);
 
+		/// The renderer this Application owns, for work that must happen before the first
+		/// frame — chiefly Renderer::LoadTexture. Valid for the Application's lifetime.
+		Renderer& GetRenderer();
+
 		/// The Timeline instance Run() samples every frame to produce deltaTime.
 		Timeline& GetGameTimeline();
 

@@ -57,7 +57,7 @@ namespace
 			Events.DispatchDue();
 		}
 
-		static EventPayload Jump() { return InputEventData{ InputAction::Jump, true }; }
+		static EventPayload Primary() { return InputEventData{ InputAction::ActionPrimary, true }; }
 		static EventPayload Left(bool pressed) { return InputEventData{ InputAction::MoveLeft, pressed }; }
 
 		double Now = 0.0;
@@ -101,7 +101,7 @@ int main()
 	// 4. Recording begins only when ReplayStart is HANDLED, not when it is raised.
 	{
 		Rig rig;
-		rig.Emit(Rig::Jump()); // before any recording: not captured
+		rig.Emit(Rig::Primary()); // before any recording: not captured
 		rig.Events.Raise(ReplayStartEventData{}, ControlPriority);
 		Check(!rig.Recorder.IsRecording(), "Recording_NotStartedByMerelyRaisingReplayStart");
 		rig.Events.DispatchDue();
@@ -116,14 +116,14 @@ int main()
 		rig.Now = 100.5;
 		rig.Emit(Rig::Left(true));
 		rig.Now = 102.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Now = 103.5;
 		rig.Emit(Rig::Left(false));
 		const auto& log = rig.Recorder.RecordedEvents();
 		Check(log.size() == 3 && log[0].RelativeTime == 0.5 && log[1].RelativeTime == 2.0 && log[2].RelativeTime == 3.5,
 		      "Recording_StoresTimeRelativeToRecordingStart");
 		Check(log.size() == 3 && std::get<InputEventData>(log[0].Payload).Action == InputAction::MoveLeft &&
-		          std::get<InputEventData>(log[1].Payload).Action == InputAction::Jump &&
+		          std::get<InputEventData>(log[1].Payload).Action == InputAction::ActionPrimary &&
 		          !std::get<InputEventData>(log[2].Payload).Pressed,
 		      "Recording_PreservesEventOrder");
 	}
@@ -132,9 +132,9 @@ int main()
 	{
 		Rig rig;
 		rig.Start();
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Control(ReplayStartEventData{}); // restart mid-recording
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Stop();
 		rig.Play();
 		bool onlyGameplay = true;
@@ -152,13 +152,13 @@ int main()
 		Rig rig;
 		rig.Start();
 		rig.Now = 1.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Now = 2.0;
 		rig.Stop();
 		Check(!rig.Recorder.IsRecording() && rig.Recorder.HasRecording() && rig.Recorder.RecordedDuration() == 2.0,
 		      "Stop_EndsRecordingAndKeepsIt");
 		rig.Now = 3.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Emit(Rig::Left(true));
 		Check(rig.Recorder.RecordedEvents().size() == 1, "Stop_FreezesTheLog");
 	}
@@ -172,7 +172,7 @@ int main()
 		rig.Now = 101.0;
 		rig.Emit(Rig::Left(true));
 		rig.Now = 103.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Now = 104.0;
 		rig.Stop();
 		rig.Dispatched.clear();
@@ -285,7 +285,7 @@ int main()
 		rig.Now = 10.0;
 		rig.Start();
 		rig.Now = 11.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Now = 12.0;
 		rig.Start(); // restart while recording
 		Check(rig.Recorder.IsRecording() && rig.Recorder.RecordedEvents().empty() && rig.Recorder.RecordingStartTime() == 12.0,
@@ -311,7 +311,7 @@ int main()
 		Rig rig;
 		rig.Start();
 		rig.Now = 1.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Now = 2.0;
 		rig.Stop();
 		size_t recordedBefore = rig.Recorder.RecordedEvents().size();
@@ -319,7 +319,7 @@ int main()
 		rig.Now = 10.0;
 		rig.Play();
 		rig.Now = 11.0;
-		rig.Events.DispatchDue(); // the replayed Jump dispatches here
+		rig.Events.DispatchDue(); // the replayed ActionPrimary dispatches here
 		Check(rig.Dispatched.size() >= 1, "Playback_ReplayedEventWasDispatched");
 		Check(rig.Recorder.RecordedEvents().size() == recordedBefore, "Playback_ReplayedEventsAreNotReRecorded");
 
@@ -336,7 +336,7 @@ int main()
 		Rig rig;
 		rig.Start();
 		rig.Now = 1.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Now = 2.0;
 		rig.Play();
 		Check(rig.Recorder.IsPlaying() && !rig.Recorder.IsRecording() && rig.Recorder.RecordedDuration() == 2.0,
@@ -350,7 +350,7 @@ int main()
 		rig.Now = 0.0;
 		rig.Start();
 		rig.Now = 1.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Now = 2.0;
 		rig.Stop();
 		rig.Now = 10.0;
@@ -378,7 +378,7 @@ int main()
 		Rig rig;
 		rig.Start();
 		rig.Now = 1.0;
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Now = 2.0;
 		rig.Stop();
 		rig.Now = 10.0;
@@ -396,7 +396,7 @@ int main()
 	{
 		Rig rig([](const Event& event) { return event.Type != EventType::Input; });
 		rig.Start();
-		rig.Emit(Rig::Jump());
+		rig.Emit(Rig::Primary());
 		rig.Emit(DeathEventData{ 1, 0 });
 		Check(rig.Recorder.RecordedEvents().size() == 1 && TypeOf(rig.Recorder.RecordedEvents()[0].Payload) == EventType::Death,
 		      "Filter_ExcludesEventsTheOwnerDoesNotWant");
@@ -408,7 +408,7 @@ int main()
 		Rig rig;
 		rig.Now = 10.0;
 		rig.Events.Raise(ReplayStartEventData{}, ControlPriority); // stamped 10.0, handled later
-		rig.Events.Schedule(Rig::Jump(), 0.5);                     // stamped 10.5
+		rig.Events.Schedule(Rig::Primary(), 0.5);                     // stamped 10.5
 		rig.Now = 11.0;                                            // recording start will read 11.0
 		rig.Events.DispatchDue();
 		Check(rig.Recorder.RecordedEvents().size() == 1 && rig.Recorder.RecordedEvents()[0].RelativeTime == 0.0,

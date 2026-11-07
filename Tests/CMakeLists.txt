@@ -41,6 +41,12 @@ add_executable(ScalingTests ScalingTest.cpp)
 target_link_libraries(ScalingTests PRIVATE Engine)
 add_test(NAME ScalingTests COMMAND ScalingTests)
 
+# Sprite/texture API (Astro rebuild Checkpoint A): ownership, validation and bookkeeping,
+# run against SDL's dummy video driver (no real window). Pixels are verified by eye in the game.
+add_executable(RendererTests RendererTest.cpp)
+target_link_libraries(RendererTests PRIVATE Engine)
+add_test(NAME RendererTests COMMAND RendererTests)
+
 add_executable(TimelineTests TimelineTest.cpp)
 target_link_libraries(TimelineTests PRIVATE Engine)
 add_test(NAME TimelineTests COMMAND TimelineTests)

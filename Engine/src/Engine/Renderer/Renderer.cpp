@@ -5,16 +5,18 @@
 #include <SDL3/SDL.h>
 
 #include <stdexcept>
+#include <string>
 
 namespace Engine
 {
 	namespace
 	{
-		// Milestone 1 Task 1 clears every frame to solid blue (ENGINEERING_SPEC.md §1: no magic numbers).
-		constexpr Uint8 ClearColorRed = 0;
-		constexpr Uint8 ClearColorGreen = 0;
-		constexpr Uint8 ClearColorBlue = 255;
-		constexpr Uint8 ClearColorAlpha = 255;
+		constexpr float DegreesPerRadian = 180.0f / 3.14159265358979323846f;
+	}
+
+	float RadiansToDegrees(float radians)
+	{
+		return radians * DegreesPerRadian;
 	}
 
 	Vector2 ApplyScalingMode(Vector2 value, ScalingMode mode, Vector2 referenceResolution, Vector2 currentResolution)
@@ -43,6 +45,8 @@ namespace Engine
 		                                            SDL_WINDOW_RESIZABLE, &m_Window, &m_Renderer);
 		if (created)
 		{
+			// So DrawObject honors Color alpha. (RenderClear is unaffected by the blend mode.)
+			SDL_SetRenderDrawBlendMode(m_Renderer, SDL_BLENDMODE_BLEND);
 			return;
 		}
 
@@ -65,14 +69,30 @@ namespace Engine
 
 	Renderer::~Renderer()
 	{
+		// Textures belong to the SDL renderer: they must be destroyed first.
+		for (SDL_Texture* texture : m_Textures)
+		{
+			SDL_DestroyTexture(texture);
+		}
+
 		SDL_DestroyRenderer(m_Renderer);
 		SDL_DestroyWindow(m_Window);
 	}
 
 	void Renderer::BeginFrame()
 	{
-		SDL_SetRenderDrawColor(m_Renderer, ClearColorRed, ClearColorGreen, ClearColorBlue, ClearColorAlpha);
+		SDL_SetRenderDrawColor(m_Renderer, m_ClearColor.R, m_ClearColor.G, m_ClearColor.B, m_ClearColor.A);
 		SDL_RenderClear(m_Renderer);
+	}
+
+	void Renderer::SetClearColor(Color color)
+	{
+		m_ClearColor = color;
+	}
+
+	Color Renderer::GetClearColor() const
+	{
+		return m_ClearColor;
 	}
 
 	void Renderer::EndFrame()
@@ -97,6 +117,71 @@ namespace Engine
 
 		SDL_FRect rect{ position.X, position.Y, size.X, size.Y };
 		SDL_RenderFillRect(m_Renderer, &rect);
+	}
+
+	TextureId Renderer::LoadTexture(const std::string& path)
+	{
+		SDL_Surface* surface = SDL_LoadPNG(path.c_str());
+		if (surface == nullptr)
+		{
+			throw std::runtime_error("LoadTexture: cannot load '" + path + "': " + SDL_GetError());
+		}
+
+		SDL_Texture* texture = SDL_CreateTextureFromSurface(m_Renderer, surface);
+		// The texture holds its own copy of the pixels; the surface is not needed either way.
+		SDL_DestroySurface(surface);
+		if (texture == nullptr)
+		{
+			throw std::runtime_error("LoadTexture: cannot create texture for '" + path + "': " + SDL_GetError());
+		}
+
+		bool configured = SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST) &&
+		                  SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+		if (!configured)
+		{
+			std::string error = SDL_GetError();
+			SDL_DestroyTexture(texture);
+			throw std::runtime_error("LoadTexture: cannot configure texture for '" + path + "': " + error);
+		}
+
+		try
+		{
+			m_Textures.push_back(texture);
+		}
+		catch (...)
+		{
+			SDL_DestroyTexture(texture);
+			throw;
+		}
+
+		return static_cast<TextureId>(m_Textures.size()); // ids start at 1; 0 is InvalidTextureId
+	}
+
+	void Renderer::DrawSprite(TextureId texture, Vector2 position, Vector2 size, float rotationRadians,
+	                          std::optional<SourceRect> source)
+	{
+		if (texture == InvalidTextureId || texture > m_Textures.size())
+		{
+			throw std::invalid_argument("DrawSprite: unknown TextureId " + std::to_string(texture));
+		}
+
+		Vector2 currentResolution = GetWindowSize();
+		Vector2 scaledPosition = ApplyScalingMode(position, m_ScalingMode, m_ReferenceResolution, currentResolution);
+		Vector2 scaledSize = ApplyScalingMode(size, m_ScalingMode, m_ReferenceResolution, currentResolution);
+
+		SDL_FRect destination{ scaledPosition.X, scaledPosition.Y, scaledSize.X, scaledSize.Y };
+
+		SDL_FRect sourceRect{};
+		const SDL_FRect* sourcePointer = nullptr;
+		if (source.has_value())
+		{
+			sourceRect = SDL_FRect{ source->X, source->Y, source->W, source->H };
+			sourcePointer = &sourceRect;
+		}
+
+		// A null center means "rotate around the middle of the destination rectangle".
+		SDL_RenderTextureRotated(m_Renderer, m_Textures[texture - 1], sourcePointer, &destination,
+		                         RadiansToDegrees(rotationRadians), nullptr, SDL_FLIP_NONE);
 	}
 
 	void Renderer::SetScalingMode(ScalingMode mode)

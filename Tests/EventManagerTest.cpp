@@ -60,7 +60,7 @@ int main()
 		EventManager manager([&] { return now; });
 		int calls = 0;
 		manager.Subscribe(EventType::Input, [&](const Event&) { ++calls; });
-		manager.Raise(InputEventData{ InputAction::Jump, true });
+		manager.Raise(InputEventData{ InputAction::ActionPrimary, true });
 		std::size_t dispatched = manager.DispatchDue();
 		Check(calls == 1 && dispatched == 1, "SubscribeRaiseDispatch_DeliversEvent");
 	}
@@ -71,7 +71,7 @@ int main()
 		EventManager manager([&] { return now; });
 		int deathCalls = 0;
 		manager.Subscribe(EventType::Death, [&](const Event&) { ++deathCalls; });
-		manager.Raise(InputEventData{ InputAction::Jump, true });
+		manager.Raise(InputEventData{ InputAction::ActionPrimary, true });
 		manager.DispatchDue();
 		Check(deathCalls == 0, "UnrelatedEventType_DoesNotTriggerHandler");
 	}
@@ -378,7 +378,7 @@ int main()
 		manager.Subscribe(EventType::Input, [&](const Event&) { ++calls; });
 		for (int i = 0; i < 3; ++i)
 		{
-			manager.Raise(InputEventData{ InputAction::Jump, true });
+			manager.Raise(InputEventData{ InputAction::ActionPrimary, true });
 		}
 		bool threw = false;
 		try
@@ -413,7 +413,7 @@ int main()
 		manager.Raise(CollisionEventData{ 11, 22 }, EventPriority::High);
 		manager.Raise(DeathEventData{ 33, 44 });
 		manager.Raise(SpawnEventData{ 55, { 6.0f, 7.0f } });
-		manager.Raise(InputEventData{ InputAction::Jump, true }, EventPriority::Low);
+		manager.Raise(InputEventData{ InputAction::ActionPrimary, true }, EventPriority::Low);
 		manager.DispatchDue();
 
 		// Priority orders these: Collision(High) first, then Death/Spawn (Normal, FIFO), then Input (Low).
@@ -436,7 +436,7 @@ int main()
 			      "Payloads_Spawn_Fields");
 
 			const auto& input = std::get<InputEventData>(seen[3].Payload);
-			Check(seen[3].Type == EventType::Input && input.Action == InputAction::Jump && input.Pressed,
+			Check(seen[3].Type == EventType::Input && input.Action == InputAction::ActionPrimary && input.Pressed,
 			      "Payloads_Input_Fields");
 
 			Check(seen[1].Sequence < seen[2].Sequence, "Envelope_SequenceIncreasesInRaiseOrder");
@@ -448,7 +448,7 @@ int main()
 		Check(TypeOf(EventPayload{ CollisionEventData{ 1, 2 } }) == EventType::Collision &&
 		          TypeOf(EventPayload{ DeathEventData{ 1, 2 } }) == EventType::Death &&
 		          TypeOf(EventPayload{ SpawnEventData{ 1, { 0.0f, 0.0f } } }) == EventType::Spawn &&
-		          TypeOf(EventPayload{ InputEventData{ InputAction::Jump, true } }) == EventType::Input,
+		          TypeOf(EventPayload{ InputEventData{ InputAction::ActionPrimary, true } }) == EventType::Input,
 		      "TypeOf_MatchesPayloadAlternative");
 	}
 

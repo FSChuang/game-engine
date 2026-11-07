@@ -55,7 +55,9 @@ namespace Engine
 	{
 		MoveLeft = 0,
 		MoveRight,
-		Jump
+		/// The game's main "do the thing" button. Deliberately not named for any one game's
+		/// verb (jump, fire, ...): the game decides what it means.
+		ActionPrimary
 	};
 
 	/// ObjectId value meaning "no object": GameObjectRegistry never assigns 0.
