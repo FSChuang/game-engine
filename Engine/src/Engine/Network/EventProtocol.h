@@ -33,24 +33,43 @@ namespace Engine
 	constexpr std::uint8_t NetworkEventFrameTag = 0x10;
 
 	/// Which gameplay event a frame announces. Add a value here (and its payload, if any) to
-	/// network another event kind; a decoder rejects any value it does not know.
+	/// network another event kind; a decoder rejects any value it does not know. Values are
+	/// part of the wire format: never renumber one.
 	enum class NetworkEventKind : std::uint8_t
 	{
 		/// The source player died. No payload: an in-process cause (an ObjectId) has no
 		/// meaning on another machine, so it is not sent.
 		Death = 1,
+		/// The source player's ship came back to life (dead -> alive). No payload: where it
+		/// is comes from the continuous player state, not from this event.
+		Spawn = 2,
+		/// The source player fired a bullet. Carries where the bullet started and which way it
+		/// flew; the receiver rebuilds the bullet from that and its own shared constants
+		/// (speed, lifetime), so the bullet itself is never sent again.
+		Shoot = 3,
 	};
 
 	/// One decoded notification: what happened and to which player.
 	struct NetworkEvent
 	{
 		NetworkEventKind Kind;
-		/// The player the event is about (the sender, for a Death event). Never 0, which is
-		/// the reserved "unassigned" PlayerId.
+		/// The player the event is about (the sender). Never 0, which is the reserved
+		/// "unassigned" PlayerId.
 		PlayerId SourcePlayerId;
+
+		// Shoot only (ignored, and zero, for every other kind). Origin is the bullet's centre
+		// in the game's world coordinates; the heading is in radians. All three must be finite.
+		float OriginX = 0.0f;
+		float OriginY = 0.0f;
+		float HeadingRadians = 0.0f;
 	};
 
-	/// Encodes an event frame: tag (1) + kind (1) + SourcePlayerId (4) = 6 bytes. Always succeeds.
+	/// Encodes an event frame, always succeeding. Layout (big-endian integers; each float is
+	/// its IEEE-754 bit pattern written as a big-endian 32-bit integer):
+	///   Death, Spawn:  tag (1) + kind (1) + SourcePlayerId (4)                      =  6 bytes
+	///   Shoot:         tag (1) + kind (1) + SourcePlayerId (4) + OriginX (4)
+	///                  + OriginY (4) + HeadingRadians (4)                           = 18 bytes
+	/// A Death frame is byte-for-byte what it was before Spawn and Shoot existed.
 	std::vector<std::uint8_t> EncodeNetworkEvent(const NetworkEvent& event);
 
 	/// True if the frame's first byte is NetworkEventFrameTag. Says nothing about whether the
@@ -59,6 +78,7 @@ namespace Engine
 	bool IsNetworkEventFrame(const std::vector<std::uint8_t>& bytes);
 
 	/// Returns std::nullopt for any malformed, truncated, padded, wrong-tag, unknown-kind or
-	/// zero-PlayerId input. Never throws, never reads out of bounds.
+	/// zero-PlayerId input, and a Shoot with a non-finite (NaN/infinite) origin or heading. The
+	/// size must match the kind exactly. Never throws, never reads out of bounds.
 	std::optional<NetworkEvent> DecodeNetworkEvent(const std::vector<std::uint8_t>& bytes);
 }
